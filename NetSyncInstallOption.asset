@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: NetSyncInstallOption
   m_EditorClassIdentifier: 
   <Name>k__BackingField: NetSync
-  <Description>k__BackingField: The ECS networking addon.
+  <Description>k__BackingField: ECS networking addon.
