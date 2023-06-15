@@ -1,5 +1,5 @@
-﻿namespace UFlow.Addon.Networking.Runtime {
-    public enum NetworkSystemRunTiming : byte {
+﻿namespace UFlow.Addon.NetSync.Runtime {
+    public enum NetSyncSystemRunTiming : byte {
         Update,
         PreTick,
         Tick,
