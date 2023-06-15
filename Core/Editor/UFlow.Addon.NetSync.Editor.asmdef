@@ -1,0 +1,17 @@
+{
+    "name": "UFlow.Addon.NetSync.Editor",
+    "rootNamespace": "UFlow.Addon.NetSync.Editor",
+    "references": [
+        "GUID:3903ff2880e05be43854034b9d477c9d",
+        "GUID:bb1ffefc3dfaace4eb1d1ecc2cf4e24a"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
