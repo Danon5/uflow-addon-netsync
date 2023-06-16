@@ -2,7 +2,8 @@
     "name": "UFlow.Addon.NetSync.Runtime",
     "rootNamespace": "UFlow.Addon.NetSync.Runtime",
     "references": [
-        "GUID:bb1ffefc3dfaace4eb1d1ecc2cf4e24a"
+        "GUID:bb1ffefc3dfaace4eb1d1ecc2cf4e24a",
+        "GUID:f39eb216e5034409abcd117541a8ba44"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
