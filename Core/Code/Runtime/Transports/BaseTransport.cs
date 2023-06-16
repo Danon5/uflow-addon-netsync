@@ -1,5 +1,6 @@
-﻿namespace UFlow.Addon.NetSync.Runtime.Code.Runtime.Transports {
-    public abstract class BaseTransport {
-        
+﻿using UnityEngine;
+
+namespace UFlow.Addon.NetSync.Runtime {
+    public abstract class BaseTransport : ScriptableObject {
     }
 }
