@@ -1,4 +1,4 @@
-﻿using UFlow.Core.Runtime;
+﻿using UFlow.Addon.Ecs.Runtime;
 using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Runtime {
