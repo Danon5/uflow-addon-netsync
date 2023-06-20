@@ -1,5 +1,5 @@
 ﻿using JetBrains.Annotations;
-using UFlow.Addon.Ecs.Runtime.Systems;
+using UFlow.Addon.Ecs.Core.Runtime;
 using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Runtime {
