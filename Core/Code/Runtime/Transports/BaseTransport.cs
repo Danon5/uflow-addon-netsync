@@ -1,4 +1,7 @@
-﻿using Cysharp.Threading.Tasks;
+﻿using System;
+using Cysharp.Threading.Tasks;
+using LiteNetLib;
+using LiteNetLib.Utils;
 using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Runtime {
@@ -18,11 +21,7 @@ namespace UFlow.Addon.NetSync.Runtime {
         public bool HostStoppingOrStopped => HostState is NetworkState.Stopping or NetworkState.Stopped;
 
         public async UniTask StartServerAsync(ushort port = DEFAULT_PORT) {
-            if (ServerStartingOrStarted) {
-                Debug.LogWarning("Server already started.");
-                return;
-            }
-            
+            if (ServerStartingOrStarted) throw new Exception("Server already started.");
             ServerState = NetworkState.Starting;
             if (!await SetupServer(port)) {
                 ServerState = NetworkState.Stopped;
@@ -33,22 +32,14 @@ namespace UFlow.Addon.NetSync.Runtime {
         }
 
         public async UniTask StopServerAsync() {
-            if (ServerStoppingOrStopped) {
-                Debug.LogWarning("Server not yet started.");
-                return;
-            }
-            
+            if (ServerStoppingOrStopped) throw new Exception("Server not yet started.");
             ServerState = NetworkState.Stopping;
             await CleanupServer();
             ServerState = NetworkState.Stopped;
         }
 
         public async UniTask StartClientAsync(string ip = DEFAULT_IP, ushort port = DEFAULT_PORT) {
-            if (ClientStartingOrStarted) {
-                Debug.LogWarning("Client already started.");
-                return;
-            }
-
+            if (ClientStartingOrStarted) throw new Exception("Client already started.");
             ClientState = NetworkState.Starting;
             if (!await SetupClient(ip, port)) {
                 ClientState = NetworkState.Stopped;
@@ -59,24 +50,15 @@ namespace UFlow.Addon.NetSync.Runtime {
         }
 
         public async UniTask StopClientAsync() {
-            if (ClientStoppingOrStopped) {
-                Debug.LogWarning("Client not yet started.");
-                return;
-            }
-
+            if (ClientStoppingOrStopped) throw new Exception("Client not yet started.");
             ClientState = NetworkState.Stopping;
             await CleanupClient();
             ClientState = NetworkState.Stopped;
         }
 
         public async UniTask StartHostAsync(ushort port = DEFAULT_PORT) {
-            if (HostStartingOrStarted) {
-                Debug.LogWarning("Host already started.");
-                return;
-            }
-
+            if (HostStartingOrStarted) throw new Exception("Host already started.");
             HostState = NetworkState.Starting;
-            
             await StartServerAsync(port);
             if (!ServerStartingOrStarted) {
                 HostState = NetworkState.Stopped;
@@ -93,17 +75,17 @@ namespace UFlow.Addon.NetSync.Runtime {
         }
 
         public async UniTask StopHostAsync() {
-            if (!HostStoppingOrStopped) {
-                Debug.LogWarning("Host not yet started.");
-                return;
-            }
-
+            if (!HostStoppingOrStopped) throw new Exception("Host not yet started.");
             HostState = NetworkState.Stopping;
             await CleanupServer();
             await CleanupClient();
             HostState = NetworkState.Stopped;
         }
 
+        public abstract void ClientRegisterHandler<T>(Action<T> handler) where T : INetSerializable;
+        public abstract void ClientUnRegisterHandler<T>() where T : INetSerializable;
+        public abstract void ServerRegisterHandler<T>(Action<T, NetPeer> handler) where T : INetSerializable;
+        public abstract void ServerUnRegisterHandler<T>() where T : INetSerializable;
         protected abstract UniTask<bool> SetupServer(ushort port);
         protected abstract UniTask CleanupServer();
         protected abstract UniTask<bool> SetupClient(string ip, ushort port);
