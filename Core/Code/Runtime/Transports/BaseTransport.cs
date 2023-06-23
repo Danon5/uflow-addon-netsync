@@ -1,7 +1,5 @@
 ﻿using System;
 using Cysharp.Threading.Tasks;
-using LiteNetLib;
-using LiteNetLib.Utils;
 using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Runtime {
@@ -81,11 +79,7 @@ namespace UFlow.Addon.NetSync.Runtime {
             await CleanupClient();
             HostState = NetworkState.Stopped;
         }
-
-        public abstract void ClientRegisterHandler<T>(Action<T> handler) where T : INetSerializable;
-        public abstract void ClientUnRegisterHandler<T>() where T : INetSerializable;
-        public abstract void ServerRegisterHandler<T>(Action<T, NetPeer> handler) where T : INetSerializable;
-        public abstract void ServerUnRegisterHandler<T>() where T : INetSerializable;
+        
         protected abstract UniTask<bool> SetupServer(ushort port);
         protected abstract UniTask CleanupServer();
         protected abstract UniTask<bool> SetupClient(string ip, ushort port);
