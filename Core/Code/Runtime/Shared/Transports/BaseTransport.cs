@@ -7,77 +7,77 @@ namespace UFlow.Addon.NetSync.Runtime {
         public const string DEFAULT_IP = "localhost";
         public const ushort DEFAULT_PORT = 7777;
 
-        public NetworkState ServerState { get; private set; }
-        public NetworkState ClientState { get; private set; }
-        public NetworkState HostState { get; private set; }
+        public ConnectionState ServerState { get; private set; }
+        public ConnectionState ClientState { get; private set; }
+        public ConnectionState HostState { get; private set; }
 
-        public bool ServerStartingOrStarted => ServerState is NetworkState.Starting or NetworkState.Started;
-        public bool ServerStoppingOrStopped => ServerState is NetworkState.Stopping or NetworkState.Stopped;
-        public bool ClientStartingOrStarted => ClientState is NetworkState.Starting or NetworkState.Started;
-        public bool ClientStoppingOrStopped => ClientState is NetworkState.Stopping or NetworkState.Stopped;
-        public bool HostStartingOrStarted => HostState is NetworkState.Starting or NetworkState.Started;
-        public bool HostStoppingOrStopped => HostState is NetworkState.Stopping or NetworkState.Stopped;
+        public bool ServerStartingOrStarted => ServerState is ConnectionState.Starting or ConnectionState.Started;
+        public bool ServerStoppingOrStopped => ServerState is ConnectionState.Stopping or ConnectionState.Stopped;
+        public bool ClientStartingOrStarted => ClientState is ConnectionState.Starting or ConnectionState.Started;
+        public bool ClientStoppingOrStopped => ClientState is ConnectionState.Stopping or ConnectionState.Stopped;
+        public bool HostStartingOrStarted => HostState is ConnectionState.Starting or ConnectionState.Started;
+        public bool HostStoppingOrStopped => HostState is ConnectionState.Stopping or ConnectionState.Stopped;
 
         public async UniTask StartServerAsync(ushort port = DEFAULT_PORT) {
             if (ServerStartingOrStarted) throw new Exception("Server already started.");
-            ServerState = NetworkState.Starting;
+            ServerState = ConnectionState.Starting;
             if (!await SetupServer(port)) {
-                ServerState = NetworkState.Stopped;
+                ServerState = ConnectionState.Stopped;
                 return;
             }
 
-            ServerState = NetworkState.Started;
+            ServerState = ConnectionState.Started;
         }
 
         public async UniTask StopServerAsync() {
             if (ServerStoppingOrStopped) throw new Exception("Server not yet started.");
-            ServerState = NetworkState.Stopping;
+            ServerState = ConnectionState.Stopping;
             await CleanupServer();
-            ServerState = NetworkState.Stopped;
+            ServerState = ConnectionState.Stopped;
         }
 
         public async UniTask StartClientAsync(string ip = DEFAULT_IP, ushort port = DEFAULT_PORT) {
             if (ClientStartingOrStarted) throw new Exception("Client already started.");
-            ClientState = NetworkState.Starting;
+            ClientState = ConnectionState.Starting;
             if (!await SetupClient(ip, port)) {
-                ClientState = NetworkState.Stopped;
+                ClientState = ConnectionState.Stopped;
                 return;
             }
 
-            ClientState = NetworkState.Started;
+            ClientState = ConnectionState.Started;
         }
 
         public async UniTask StopClientAsync() {
             if (ClientStoppingOrStopped) throw new Exception("Client not yet started.");
-            ClientState = NetworkState.Stopping;
+            ClientState = ConnectionState.Stopping;
             await CleanupClient();
-            ClientState = NetworkState.Stopped;
+            ClientState = ConnectionState.Stopped;
         }
 
         public async UniTask StartHostAsync(ushort port = DEFAULT_PORT) {
             if (HostStartingOrStarted) throw new Exception("Host already started.");
-            HostState = NetworkState.Starting;
+            HostState = ConnectionState.Starting;
             await StartServerAsync(port);
             if (!ServerStartingOrStarted) {
-                HostState = NetworkState.Stopped;
+                HostState = ConnectionState.Stopped;
                 return;
             }
             
             await StartClientAsync("localhost", port);
             if (!ClientStartingOrStarted) {
-                HostState = NetworkState.Stopped;
+                HostState = ConnectionState.Stopped;
                 return;
             }
             
-            HostState = NetworkState.Started;
+            HostState = ConnectionState.Started;
         }
 
         public async UniTask StopHostAsync() {
             if (!HostStoppingOrStopped) throw new Exception("Host not yet started.");
-            HostState = NetworkState.Stopping;
+            HostState = ConnectionState.Stopping;
             await CleanupServer();
             await CleanupClient();
-            HostState = NetworkState.Stopped;
+            HostState = ConnectionState.Stopped;
         }
         
         protected abstract UniTask<bool> SetupServer(ushort port);
