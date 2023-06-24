@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using MemoryPack;
 
 namespace UFlow.Addon.NetSync.Runtime {
-    [MemoryPackable]
+    [StructLayout(LayoutKind.Sequential)]
+    [MemoryPackable(SerializeLayout.Sequential)]
     public unsafe partial struct SyncVar<T> where T : unmanaged {
         internal T value;
         private static readonly int s_size = sizeof(T);
