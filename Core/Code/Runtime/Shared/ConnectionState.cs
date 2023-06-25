@@ -1,4 +1,4 @@
-﻿namespace UFlow.Addon.NetSync.Runtime {
+﻿namespace UFlow.Addon.NetSync.Core.Runtime {
     public enum ConnectionState : byte {
         Stopped,
         Stopping,

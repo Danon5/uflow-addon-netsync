@@ -1,7 +1,7 @@
 ﻿using Cysharp.Threading.Tasks;
 using LiteNetLib;
 
-namespace UFlow.Addon.NetSync.Runtime {
+namespace UFlow.Addon.NetSync.Core.Runtime {
     public sealed class NetSyncTransport : BaseTransport {
         private readonly EventBasedNetListener m_serverListener;
         private readonly NetManager m_server;

@@ -2,7 +2,7 @@
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 
-namespace UFlow.Addon.NetSync.Runtime {
+namespace UFlow.Addon.NetSync.Core.Runtime {
     public abstract class BaseTransport : ScriptableObject {
         public const string DEFAULT_IP = "localhost";
         public const ushort DEFAULT_PORT = 7777;
