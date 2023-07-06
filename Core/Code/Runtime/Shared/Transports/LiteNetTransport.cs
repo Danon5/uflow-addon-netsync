@@ -2,13 +2,13 @@
 using LiteNetLib;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
-    public sealed class NetSyncTransport : BaseTransport {
+    public sealed class LiteNetTransport : BaseTransport {
         private readonly EventBasedNetListener m_serverListener;
         private readonly NetManager m_server;
         private readonly EventBasedNetListener m_clientListener;
         private readonly NetManager m_client;
 
-        public NetSyncTransport() {
+        public LiteNetTransport() {
             m_serverListener = new EventBasedNetListener();
             m_server = new NetManager(m_serverListener);
             m_clientListener = new EventBasedNetListener();
