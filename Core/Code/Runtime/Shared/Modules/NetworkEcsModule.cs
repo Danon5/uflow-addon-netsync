@@ -2,7 +2,7 @@
 using UFlow.Core.Runtime;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
-    public sealed class NetworkEcsModule : BaseModule {
+    public sealed class NetworkEcsModule : BaseModule<NetworkEcsModule> {
         public World NetworkWorld { get; private set; }
         
         
