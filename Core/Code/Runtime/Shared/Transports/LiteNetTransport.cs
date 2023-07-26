@@ -1,6 +1,7 @@
 ﻿using System;
 using Cysharp.Threading.Tasks;
 using LiteNetLib;
+using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     public sealed class LiteNetTransport : BaseTransport {
@@ -29,7 +30,17 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (m_client.IsRunning)
                 m_client.PollEvents();
         }
-        
+        public override void Dispose() {
+            if (m_server.IsRunning) {
+                m_server.Stop();
+                Debug.Log("Server stopped.");
+            }
+            if (m_client.IsRunning) {
+                m_client.Stop();
+                Debug.Log("Server stopped");
+            }
+        }
+
         protected override async UniTask<bool> SetupServer(ushort port) {
             var result = m_server.Start(port);
             await UniTask.WaitUntil(() => m_server.IsRunning).Timeout(s_timeout);

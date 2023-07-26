@@ -11,6 +11,16 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             m_transport = transport;
         }
 
+        public override void UnloadDirect() {
+            if (m_transport.HostStartingOrStarted)
+                m_transport.StopHostAsync().Forget();
+            else if (m_transport.ServerStartingOrStarted)
+                m_transport.StopServerAsync().Forget();
+            else if (m_transport.ClientStartingOrStarted)
+                m_transport.StopClientAsync().Forget();
+            m_transport?.Dispose();
+        }
+
         public UniTask StartServerAsync() => m_transport.StartServerAsync();
         
         public UniTask StartServerAsync(ushort port) => m_transport.StartServerAsync(port);

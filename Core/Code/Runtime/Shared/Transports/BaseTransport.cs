@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using Cysharp.Threading.Tasks;
+using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     public abstract class BaseTransport {
@@ -31,6 +32,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
             ServerState = ConnectionState.Started;
             ServerStartedEvent?.Invoke();
+            Debug.Log($"Server started on port {port}.");
         }
 
         public async UniTask StopServerAsync() {
@@ -39,6 +41,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             await CleanupServer();
             ServerState = ConnectionState.Stopped;
             ServerStoppedEvent?.Invoke();
+            Debug.Log("Server stopped.");
         }
 
         public async UniTask StartClientAsync(string ip = DEFAULT_IP, ushort port = DEFAULT_PORT) {
@@ -50,6 +53,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
             ClientState = ConnectionState.Started;
             ClientStartedEvent?.Invoke();
+            Debug.Log($"Client started with ip {ip} and port {port}.");
         }
 
         public async UniTask StopClientAsync() {
@@ -58,6 +62,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             await CleanupClient();
             ClientState = ConnectionState.Stopped;
             ClientStoppedEvent?.Invoke();
+            Debug.Log("Client stopped.");
         }
 
         public async UniTask StartHostAsync(ushort port = DEFAULT_PORT) {
@@ -75,6 +80,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
             HostState = ConnectionState.Started;
             HostStartedEvent?.Invoke();
+            Debug.Log("Host started.");
         }
 
         public async UniTask StopHostAsync() {
@@ -84,9 +90,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             await CleanupClient();
             HostState = ConnectionState.Stopped;
             HostStoppedEvent?.Invoke();
+            Debug.Log("Host stopped.");
         }
 
         public abstract void PollEvents();
+
+        public abstract void Dispose();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void InvokeServerStarted() => ServerStartedEvent?.Invoke();
