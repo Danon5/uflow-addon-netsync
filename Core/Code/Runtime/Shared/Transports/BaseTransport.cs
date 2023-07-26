@@ -1,16 +1,21 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
-    public abstract class BaseTransport : ScriptableObject {
+    public abstract class BaseTransport {
         public const string DEFAULT_IP = "localhost";
         public const ushort DEFAULT_PORT = 7777;
-
+        public event Action ServerStartedEvent;
+        public event Action ServerStoppedEvent;
+        public event Action ClientStartedEvent;
+        public event Action ClientStoppedEvent;
+        public event Action HostStartedEvent;
+        public event Action HostStoppedEvent; 
         public ConnectionState ServerState { get; private set; }
         public ConnectionState ClientState { get; private set; }
         public ConnectionState HostState { get; private set; }
-
         public bool ServerStartingOrStarted => ServerState is ConnectionState.Starting or ConnectionState.Started;
         public bool ServerStoppingOrStopped => ServerState is ConnectionState.Stopping or ConnectionState.Stopped;
         public bool ClientStartingOrStarted => ClientState is ConnectionState.Starting or ConnectionState.Started;
@@ -25,8 +30,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 ServerState = ConnectionState.Stopped;
                 return;
             }
-
             ServerState = ConnectionState.Started;
+            ServerStartedEvent?.Invoke();
         }
 
         public async UniTask StopServerAsync() {
@@ -34,6 +39,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             ServerState = ConnectionState.Stopping;
             await CleanupServer();
             ServerState = ConnectionState.Stopped;
+            ServerStoppedEvent?.Invoke();
         }
 
         public async UniTask StartClientAsync(string ip = DEFAULT_IP, ushort port = DEFAULT_PORT) {
@@ -43,8 +49,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 ClientState = ConnectionState.Stopped;
                 return;
             }
-
             ClientState = ConnectionState.Started;
+            ClientStartedEvent?.Invoke();
         }
 
         public async UniTask StopClientAsync() {
@@ -52,6 +58,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             ClientState = ConnectionState.Stopping;
             await CleanupClient();
             ClientState = ConnectionState.Stopped;
+            ClientStoppedEvent?.Invoke();
         }
 
         public async UniTask StartHostAsync(ushort port = DEFAULT_PORT) {
@@ -62,14 +69,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 HostState = ConnectionState.Stopped;
                 return;
             }
-            
             await StartClientAsync("localhost", port);
             if (!ClientStartingOrStarted) {
                 HostState = ConnectionState.Stopped;
                 return;
             }
-            
             HostState = ConnectionState.Started;
+            HostStartedEvent?.Invoke();
         }
 
         public async UniTask StopHostAsync() {
@@ -78,11 +84,35 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             await CleanupServer();
             await CleanupClient();
             HostState = ConnectionState.Stopped;
+            HostStoppedEvent?.Invoke();
         }
+
+        public abstract void PollEvents();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected void InvokeServerStarted() => ServerStartedEvent?.Invoke();
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected void InvokeServerStopped() => ServerStoppedEvent?.Invoke();
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected void InvokeClientStarted() => ClientStartedEvent?.Invoke();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected void InvokeClientStopped() => ClientStoppedEvent?.Invoke();
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected void InvokeHostStarted() => HostStartedEvent?.Invoke();
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected void InvokeHostStopped() => HostStoppedEvent?.Invoke();
         
         protected abstract UniTask<bool> SetupServer(ushort port);
+        
         protected abstract UniTask CleanupServer();
+        
         protected abstract UniTask<bool> SetupClient(string ip, ushort port);
+        
         protected abstract UniTask CleanupClient();
     }
 }
