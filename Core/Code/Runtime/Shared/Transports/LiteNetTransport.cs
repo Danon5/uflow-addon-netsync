@@ -5,19 +5,21 @@ using LiteNetLib;
 namespace UFlow.Addon.NetSync.Core.Runtime {
     public sealed class LiteNetTransport : BaseTransport {
         private static readonly TimeSpan s_timeout = TimeSpan.FromSeconds(5);
-        private readonly EventBasedNetListener m_serverListener;
         private readonly NetManager m_server;
-        private readonly EventBasedNetListener m_clientListener;
         private readonly NetManager m_client;
+        private NetPeer m_clientPeer;
 
         public LiteNetTransport() {
-            m_serverListener = new EventBasedNetListener();
-            m_server = new NetManager(m_serverListener) {
-                AutoRecycle = true
+            var serverListener = new EventBasedNetListener();
+            m_server = new NetManager(serverListener) {
+                AutoRecycle = true,
+                DisconnectTimeout = s_timeout.Milliseconds
             };
-            m_clientListener = new EventBasedNetListener();
-            m_client = new NetManager(m_clientListener) {
-                AutoRecycle = true
+
+            var clientListener = new EventBasedNetListener();
+            m_client = new NetManager(clientListener) {
+                AutoRecycle = true,
+                DisconnectTimeout = s_timeout.Milliseconds
             };
         }
 
@@ -40,9 +42,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         protected override async UniTask<bool> SetupClient(string ip, ushort port) {
-            var result = m_client.Start(port);
+            m_clientPeer = m_client.Connect(ip, port, string.Empty);
             await UniTask.WaitUntil(() => m_client.IsRunning).Timeout(s_timeout);
-            return result;
+            return m_clientPeer != null;
         }
 
         protected override async UniTask CleanupClient() {

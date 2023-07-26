@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using Cysharp.Threading.Tasks;
-using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     public abstract class BaseTransport {
