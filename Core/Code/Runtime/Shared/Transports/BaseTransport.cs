@@ -46,6 +46,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         public async UniTask StartClientAsync(string ip = DEFAULT_IP, ushort port = DEFAULT_PORT) {
             if (ClientStartingOrStarted) throw new Exception("Client already started.");
+            if (ip == "localhost")
+                ip = "127.0.0.1";
             ClientState = ConnectionState.Starting;
             if (!await SetupClient(ip, port)) {
                 ClientState = ConnectionState.Stopped;
@@ -53,7 +55,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
             ClientState = ConnectionState.Started;
             ClientStartedEvent?.Invoke();
-            Debug.Log($"Client started with ip {ip} and port {port}.");
+            Debug.Log($"Client started with ip {ip} on port {port}.");
         }
 
         public async UniTask StopClientAsync() {
@@ -84,7 +86,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         public async UniTask StopHostAsync() {
-            if (!HostStoppingOrStopped) throw new Exception("Host not yet started.");
+            if (HostStoppingOrStopped) throw new Exception("Host not yet started.");
             HostState = ConnectionState.Stopping;
             await CleanupServer();
             await CleanupClient();

@@ -12,6 +12,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         public LiteNetTransport() {
             var serverListener = new EventBasedNetListener();
+            serverListener.ConnectionRequestEvent += On;
             m_server = new NetManager(serverListener) {
                 AutoRecycle = true,
                 DisconnectTimeout = s_timeout.Milliseconds
@@ -25,10 +26,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         public override void PollEvents() {
-            if (m_server.IsRunning)
-                m_server.PollEvents();
-            if (m_client.IsRunning)
-                m_client.PollEvents();
+            m_server.PollEvents();
+            m_client.PollEvents();
         }
         public override void Dispose() {
             if (m_server.IsRunning) {
@@ -37,7 +36,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
             if (m_client.IsRunning) {
                 m_client.Stop();
-                Debug.Log("Server stopped");
+                Debug.Log("Client stopped");
             }
         }
 
@@ -53,14 +52,21 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         protected override async UniTask<bool> SetupClient(string ip, ushort port) {
+            m_client.Start();
             m_clientPeer = m_client.Connect(ip, port, string.Empty);
             await UniTask.WaitUntil(() => m_client.IsRunning).Timeout(s_timeout);
+            if (m_clientPeer == null)
+                Debug.LogWarning($"Connection failed to ip {ip} on port {port}.");
             return m_clientPeer != null;
         }
 
         protected override async UniTask CleanupClient() {
             m_client.Stop();
             await UniTask.WaitUntil(() => !m_client.IsRunning);
+        }
+
+        private static void On(ConnectionRequest request) {
+            request.Accept();
         }
     }
 }
