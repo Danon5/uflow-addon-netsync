@@ -32,11 +32,15 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public override void ForceStop() {
             if (m_server.IsRunning) {
                 m_server.Stop();
+#if UFLOW_DEBUG_ENABLED
                 Debug.Log("Server stopped.");
+#endif
             }
             if (m_client.IsRunning) {
                 m_client.Stop();
+#if UFLOW_DEBUG_ENABLED
                 Debug.Log("Client stopped");
+#endif
             }
         }
 
@@ -49,20 +53,28 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         protected override async UniTask CleanupServer() {
             m_server.Stop();
             await UniTask.WaitUntil(() => !m_server.IsRunning);
+#if UFLOW_DEBUG_ENABLED
+            Debug.Log("Server stopped.");
+#endif
         }
 
         protected override async UniTask<bool> SetupClient(string ip, ushort port) {
             m_client.Start();
             m_clientPeer = m_client.Connect(ip, port, string.Empty);
             await UniTask.WaitUntil(() => m_client.IsRunning).Timeout(s_timeout);
+#if UFLOW_DEBUG_ENABLED
             if (m_clientPeer == null)
                 Debug.LogWarning($"Connection failed to ip {ip} on port {port}.");
+#endif
             return m_clientPeer != null;
         }
 
         protected override async UniTask CleanupClient() {
             m_client.Stop();
             await UniTask.WaitUntil(() => !m_client.IsRunning);
+#if UFLOW_DEBUG_ENABLED
+            Debug.Log("Client stopped");
+#endif
         }
 
         private static void On(ConnectionRequest request) {

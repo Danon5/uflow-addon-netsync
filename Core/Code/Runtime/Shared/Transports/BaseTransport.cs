@@ -32,7 +32,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
             ServerState = ConnectionState.Started;
             ServerStartedEvent?.Invoke();
+#if UFLOW_DEBUG_ENABLED
             Debug.Log($"Server started on port {port}.");
+#endif
         }
 
         public async UniTask StopServerAsync() {
@@ -41,7 +43,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             await CleanupServer();
             ServerState = ConnectionState.Stopped;
             ServerStoppedEvent?.Invoke();
+#if UFLOW_DEBUG_ENABLED
             Debug.Log("Server stopped.");
+#endif
         }
 
         public async UniTask StartClientAsync(string ip = DEFAULT_IP, ushort port = DEFAULT_PORT) {
@@ -55,7 +59,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
             ClientState = ConnectionState.Started;
             ClientStartedEvent?.Invoke();
+#if UFLOW_DEBUG_ENABLED
             Debug.Log($"Client started with ip {ip} on port {port}.");
+#endif
         }
 
         public async UniTask StopClientAsync() {
@@ -64,7 +70,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             await CleanupClient();
             ClientState = ConnectionState.Stopped;
             ClientStoppedEvent?.Invoke();
+#if UFLOW_DEBUG_ENABLED
             Debug.Log("Client stopped.");
+#endif
         }
 
         public async UniTask StartHostAsync(ushort port = DEFAULT_PORT) {
@@ -82,7 +90,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
             HostState = ConnectionState.Started;
             HostStartedEvent?.Invoke();
+#if UFLOW_DEBUG_ENABLED
             Debug.Log("Host started.");
+#endif
         }
 
         public async UniTask StopHostAsync() {
@@ -92,7 +102,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             await CleanupClient();
             HostState = ConnectionState.Stopped;
             HostStoppedEvent?.Invoke();
+#if UFLOW_DEBUG_ENABLED
             Debug.Log("Host stopped.");
+#endif
         }
 
         public abstract void PollEvents();
