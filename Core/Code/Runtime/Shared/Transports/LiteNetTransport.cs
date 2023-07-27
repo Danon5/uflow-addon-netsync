@@ -29,7 +29,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             m_server.PollEvents();
             m_client.PollEvents();
         }
-        public override void Dispose() {
+        public override void ForceStop() {
             if (m_server.IsRunning) {
                 m_server.Stop();
                 Debug.Log("Server stopped.");

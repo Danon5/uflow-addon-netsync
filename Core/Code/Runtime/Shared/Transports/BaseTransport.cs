@@ -97,7 +97,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         public abstract void PollEvents();
 
-        public abstract void Dispose();
+        public abstract void ForceStop();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void InvokeServerStarted() => ServerStartedEvent?.Invoke();

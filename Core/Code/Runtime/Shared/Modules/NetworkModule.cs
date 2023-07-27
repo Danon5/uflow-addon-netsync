@@ -4,8 +4,10 @@ using UFlow.Core.Runtime;
 namespace UFlow.Addon.NetSync.Core.Runtime {
     public sealed class NetworkModule : BaseAsyncBehaviourModule<NetworkModule> {
         private readonly BaseTransport m_transport;
-        
-        public NetworkModule() { }
+
+        public NetworkModule() {
+            m_transport = new LiteNetTransport();
+        }
 
         public NetworkModule(in BaseTransport transport) {
             m_transport = transport;
@@ -18,16 +20,16 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 await m_transport.StopServerAsync();
             else if (m_transport.ClientStartingOrStarted)
                 await m_transport.StopClientAsync();
-            m_transport?.Dispose();
+            m_transport.ForceStop();
         }
 
-        public override void LateUpdate() {
-            m_transport?.PollEvents();
-        }
+        public override void LateUpdate() => m_transport.PollEvents();
 
         public UniTask StartServerAsync() => m_transport.StartServerAsync();
         
         public UniTask StartServerAsync(ushort port) => m_transport.StartServerAsync(port);
+
+        public UniTask StopServerAsync() => m_transport.StopServerAsync();
 
         public UniTask StartClientAsync() => m_transport.StartClientAsync();
 
@@ -36,5 +38,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public UniTask StartHostAsync() => m_transport.StartHostAsync();
         
         public UniTask StartHostAsync(ushort port) => m_transport.StartHostAsync(port);
+        
     }
 }
