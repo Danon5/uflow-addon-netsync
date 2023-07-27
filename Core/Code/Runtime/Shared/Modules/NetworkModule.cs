@@ -23,7 +23,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             m_transport.ForceStop();
         }
 
-        public override void LateUpdate() => m_transport.PollEvents();
+        public override void FinalUpdate() => m_transport.PollEvents();
 
         public UniTask StartServerAsync() => m_transport.StartServerAsync();
         
