@@ -6,22 +6,25 @@ using UnityEngine;
 namespace UFlow.Addon.NetSync.Core.Runtime {
     public sealed class LiteNetTransport : BaseTransport {
         private static readonly TimeSpan s_timeout = TimeSpan.FromSeconds(5);
+        private static readonly int s_timeoutMS = (int)s_timeout.TotalMilliseconds;
         private readonly NetManager m_server;
         private readonly NetManager m_client;
         private NetPeer m_clientPeer;
 
         public LiteNetTransport() {
             var serverListener = new EventBasedNetListener();
-            serverListener.ConnectionRequestEvent += On;
+            serverListener.ConnectionRequestEvent += OnConnectionRequest;
+            serverListener.PeerConnectedEvent += OnPeerConnected;
+            serverListener.PeerDisconnectedEvent += OnPeerDisconnected;
             m_server = new NetManager(serverListener) {
                 AutoRecycle = true,
-                DisconnectTimeout = s_timeout.Milliseconds
+                DisconnectTimeout = s_timeoutMS
             };
 
             var clientListener = new EventBasedNetListener();
             m_client = new NetManager(clientListener) {
                 AutoRecycle = true,
-                DisconnectTimeout = s_timeout.Milliseconds
+                DisconnectTimeout = s_timeoutMS
             };
         }
 
@@ -51,10 +54,11 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         protected override async UniTask CleanupServer() {
-            m_server.Stop();
+            m_server.Stop(true);
             await UniTask.WaitUntil(() => !m_server.IsRunning);
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log("Server stopped.");
+            if (HostState == ConnectionState.Stopping)
+                Debug.Log("Server stopped.");
 #endif
         }
 
@@ -73,12 +77,25 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             m_client.Stop();
             await UniTask.WaitUntil(() => !m_client.IsRunning);
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log("Client stopped");
+            if (HostState == ConnectionState.Stopping)
+                Debug.Log("Client stopped");
 #endif
         }
 
-        private static void On(ConnectionRequest request) {
+        private static void OnConnectionRequest(ConnectionRequest request) {
             request.Accept();
+        }
+
+        private void OnPeerConnected(NetPeer peer) {
+#if UFLOW_DEBUG_ENABLED
+            Debug.Log($"Peer {peer.Id} connected.");
+#endif
+        }
+        
+        private void OnPeerDisconnected(NetPeer peer, DisconnectInfo info) {
+#if UFLOW_DEBUG_ENABLED
+            Debug.Log($"Peer {peer.Id} disconnected: {info.Reason}.");
+#endif
         }
     }
 }
