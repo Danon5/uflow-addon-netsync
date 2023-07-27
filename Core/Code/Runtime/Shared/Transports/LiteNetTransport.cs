@@ -13,15 +13,17 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         public LiteNetTransport() {
             var serverListener = new EventBasedNetListener();
-            serverListener.ConnectionRequestEvent += OnConnectionRequest;
-            serverListener.PeerConnectedEvent += OnPeerConnected;
-            serverListener.PeerDisconnectedEvent += OnPeerDisconnected;
+            serverListener.ConnectionRequestEvent += ServerOnConnectionRequest;
+            serverListener.PeerConnectedEvent += ServerOnPeerConnected;
+            serverListener.PeerDisconnectedEvent += ServerOnPeerDisconnected;
             m_server = new NetManager(serverListener) {
                 AutoRecycle = true,
                 DisconnectTimeout = s_timeoutMS
             };
 
             var clientListener = new EventBasedNetListener();
+            clientListener.PeerConnectedEvent += ClientOnPeerConnected;
+            clientListener.PeerDisconnectedEvent += ClientOnPeerDisconnected;
             m_client = new NetManager(clientListener) {
                 AutoRecycle = true,
                 DisconnectTimeout = s_timeoutMS
@@ -82,19 +84,31 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #endif
         }
 
-        private static void OnConnectionRequest(ConnectionRequest request) {
+        private static void ServerOnConnectionRequest(ConnectionRequest request) {
             request.Accept();
         }
 
-        private void OnPeerConnected(NetPeer peer) {
+        private void ServerOnPeerConnected(NetPeer peer) {
 #if UFLOW_DEBUG_ENABLED
             Debug.Log($"Peer {peer.Id} connected.");
 #endif
         }
         
-        private void OnPeerDisconnected(NetPeer peer, DisconnectInfo info) {
+        private void ServerOnPeerDisconnected(NetPeer peer, DisconnectInfo info) {
 #if UFLOW_DEBUG_ENABLED
             Debug.Log($"Peer {peer.Id} disconnected: {info.Reason}.");
+#endif
+        }
+
+        private void ClientOnPeerConnected(NetPeer peer) {
+#if UFLOW_DEBUG_ENABLED
+            Debug.Log("Connected.");
+#endif
+        }
+        
+        private void ClientOnPeerDisconnected(NetPeer peer, DisconnectInfo info) {
+#if UFLOW_DEBUG_ENABLED
+            Debug.Log($"Disconnected: {info.Reason}");
 #endif
         }
     }
