@@ -107,7 +107,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #endif
         }
 
-        public abstract void SendRPC();
+        public abstract void SendRPC<T>(in T rpc) where T : INetRpc;
 
         public abstract void PollEvents();
 

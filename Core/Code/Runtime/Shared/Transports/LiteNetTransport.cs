@@ -30,7 +30,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             };
         }
 
-        public override void SendRPC() {
+        public override void SendRPC<T>(in T rpc) {
             
         }
         
