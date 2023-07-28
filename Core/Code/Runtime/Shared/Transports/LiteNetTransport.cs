@@ -40,7 +40,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         public override void SendServerRpc<T>(in T rpc, DeliveryMethod method) {
-            ResetCursors();
             m_buffer.WriteUnsafe(rpc); // replace
             m_writer.Put(m_buffer.GetBytesToCursor());
             m_client.SendBroadcast(m_writer, m_client.LocalPort);
@@ -48,7 +47,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
         
         public override void SendClientRpc<T>(in T rpc, DeliveryMethod method) {
-            ResetCursors();
             m_buffer.WriteUnsafe(rpc); // replace
             m_writer.Put(m_buffer.GetBytesToCursor());
             m_server.SendToAll(m_writer, method);
@@ -56,14 +54,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         public override void SendClientRpc<T>(in T rpc, in NetPeer excludedClient, DeliveryMethod method) {
-            ResetCursors();
             m_buffer.WriteUnsafe(rpc); // replace
             m_writer.Put(m_buffer.GetBytesToCursor());
             m_server.SendToAll(m_writer, method, excludedClient);
             ResetCursors();
         }
         public override void SendTargetRpc<T>(in T rpc, in NetPeer target, DeliveryMethod method) {
-            ResetCursors();
             m_buffer.WriteUnsafe(rpc); // replace
             m_writer.Put(m_buffer.GetBytesToCursor());
             target.Send(m_writer, method);
@@ -84,7 +80,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (m_client.IsRunning) {
                 m_client.Stop();
 #if UFLOW_DEBUG_ENABLED
-                Debug.Log("Client stopped");
+                Debug.Log("Client stopped.");
 #endif
             }
         }
@@ -120,7 +116,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             await UniTask.WaitUntil(() => !m_client.IsRunning);
 #if UFLOW_DEBUG_ENABLED
             if (HostState == ConnectionState.Stopping)
-                Debug.Log("Client stopped");
+                Debug.Log("Client stopped.");
 #endif
         }
 
@@ -148,7 +144,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         
         private void ClientOnPeerDisconnected(NetPeer peer, DisconnectInfo info) {
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log($"Disconnected: {info.Reason}");
+            Debug.Log($"Disconnected: {info.Reason}.");
 #endif
         }
 
