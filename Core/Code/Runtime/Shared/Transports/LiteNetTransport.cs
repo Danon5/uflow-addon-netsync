@@ -1,6 +1,10 @@
-﻿using System;
+﻿
+using System;
+using System.Runtime.CompilerServices;
 using Cysharp.Threading.Tasks;
 using LiteNetLib;
+using LiteNetLib.Utils;
+using UFlow.Addon.ECS.Core.Runtime;
 using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
@@ -9,6 +13,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         private static readonly int s_timeoutMS = (int)s_timeout.TotalMilliseconds;
         private readonly NetManager m_server;
         private readonly NetManager m_client;
+        private readonly ByteBuffer m_buffer;
+        private readonly NetDataWriter m_writer;
+        private readonly NetDataReader m_reader;
         private NetPeer m_clientPeer;
 
         public LiteNetTransport() {
@@ -20,7 +27,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 AutoRecycle = true,
                 DisconnectTimeout = s_timeoutMS
             };
-
             var clientListener = new EventBasedNetListener();
             clientListener.PeerConnectedEvent += ClientOnPeerConnected;
             clientListener.PeerDisconnectedEvent += ClientOnPeerDisconnected;
@@ -28,12 +34,42 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 AutoRecycle = true,
                 DisconnectTimeout = s_timeoutMS
             };
+            m_buffer = new ByteBuffer(true);
+            m_writer = new NetDataWriter(true);
+            m_reader = new NetDataReader(m_writer);
         }
 
-        public override void SendRPC<T>(in T rpc) {
-            
+        public override void SendServerRpc<T>(in T rpc, DeliveryMethod method) {
+            ResetCursors();
+            m_buffer.WriteUnsafe(rpc); // replace
+            m_writer.Put(m_buffer.GetBytesToCursor());
+            m_client.SendBroadcast(m_writer, m_client.LocalPort);
+            ResetCursors();
         }
         
+        public override void SendClientRpc<T>(in T rpc, DeliveryMethod method) {
+            ResetCursors();
+            m_buffer.WriteUnsafe(rpc); // replace
+            m_writer.Put(m_buffer.GetBytesToCursor());
+            m_server.SendToAll(m_writer, method);
+            ResetCursors();
+        }
+
+        public override void SendClientRpc<T>(in T rpc, in NetPeer excludedClient, DeliveryMethod method) {
+            ResetCursors();
+            m_buffer.WriteUnsafe(rpc); // replace
+            m_writer.Put(m_buffer.GetBytesToCursor());
+            m_server.SendToAll(m_writer, method, excludedClient);
+            ResetCursors();
+        }
+        public override void SendTargetRpc<T>(in T rpc, in NetPeer target, DeliveryMethod method) {
+            ResetCursors();
+            m_buffer.WriteUnsafe(rpc); // replace
+            m_writer.Put(m_buffer.GetBytesToCursor());
+            target.Send(m_writer, method);
+            ResetCursors();
+        }
+
         public override void PollEvents() {
             m_server.PollEvents();
             m_client.PollEvents();
@@ -114,6 +150,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #if UFLOW_DEBUG_ENABLED
             Debug.Log($"Disconnected: {info.Reason}");
 #endif
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ResetCursors() {
+            m_buffer.ResetCursor();
+            m_writer.Reset();
         }
     }
 }

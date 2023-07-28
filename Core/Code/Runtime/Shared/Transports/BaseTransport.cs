@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 using Cysharp.Threading.Tasks;
+using LiteNetLib;
 using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
@@ -107,7 +108,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #endif
         }
 
-        public abstract void SendRPC<T>(in T rpc) where T : INetRpc;
+        public abstract void SendServerRpc<T>(in T rpc, DeliveryMethod method) where T : unmanaged, INetRpc;
+        public abstract void SendClientRpc<T>(in T rpc, DeliveryMethod method) where T : unmanaged, INetRpc;
+        public abstract void SendClientRpc<T>(in T rpc, in NetPeer excludedClient, DeliveryMethod method) where T : unmanaged, INetRpc;
+        public abstract void SendTargetRpc<T>(in T rpc, in NetPeer target, DeliveryMethod method) where T : unmanaged, INetRpc;
 
         public abstract void PollEvents();
 
