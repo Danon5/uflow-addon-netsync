@@ -107,6 +107,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #endif
         }
 
+        public abstract void SendRPC();
+
         public abstract void PollEvents();
 
         public abstract void ForceStop();

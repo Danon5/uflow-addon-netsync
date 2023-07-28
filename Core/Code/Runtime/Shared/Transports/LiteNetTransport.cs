@@ -30,6 +30,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             };
         }
 
+        public override void SendRPC() {
+            
+        }
+        
         public override void PollEvents() {
             m_server.PollEvents();
             m_client.PollEvents();
