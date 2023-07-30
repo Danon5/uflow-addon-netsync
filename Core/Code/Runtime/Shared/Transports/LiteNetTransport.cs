@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using Cysharp.Threading.Tasks;
 using LiteNetLib;
 using LiteNetLib.Utils;
-using UFlow.Addon.ECS.Core.Runtime;
+using UFlow.Addon.Serialization.Core.Runtime;
 using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
