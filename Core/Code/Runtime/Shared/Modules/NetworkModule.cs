@@ -1,4 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
+using LiteNetLib;
 using UFlow.Core.Runtime;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
@@ -34,51 +35,61 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         public static class ServerAPI {
             public static UniTask StartServerAsync() {
-                UFlowUtils.Modules.ThrowIfNotLoaded<NetworkModule>();
+                ThrowIfNotLoaded();
                 return s_internalSingleton.m_transport.StartServerAsync();
             }
 
             public static UniTask StartServerAsync(ushort port) {
-                UFlowUtils.Modules.ThrowIfNotLoaded<NetworkModule>();
+                ThrowIfNotLoaded();
                 return s_internalSingleton.m_transport.StartServerAsync(port);
             }
 
             public static UniTask StopServerAsync() {
-                UFlowUtils.Modules.ThrowIfNotLoaded<NetworkModule>();
+                ThrowIfNotLoaded();
                 return s_internalSingleton.m_transport.StopServerAsync();
+            }
+
+            public static void SendRpcToAll<T>(in T rpc, DeliveryMethod deliveryMethod = DeliveryMethod.ReliableOrdered) 
+                where T : INetRpc {
+                
+            }
+
+            public static void SendRpc<T>(in T rpc, in NetPeer peer, DeliveryMethod deliveryMethod = DeliveryMethod.ReliableOrdered) 
+                where T : INetRpc {
+                
             }
         }
         
         public static class ClientAPI {
             public static UniTask StartClientAsync() {
-                UFlowUtils.Modules.ThrowIfNotLoaded<NetworkModule>();
+                ThrowIfNotLoaded();
                 return s_internalSingleton.m_transport.StartClientAsync();
             }
 
             public static UniTask StartClientAsync(string ip, ushort port) {
-                UFlowUtils.Modules.ThrowIfNotLoaded<NetworkModule>();
+                ThrowIfNotLoaded();
                 return s_internalSingleton.m_transport.StartClientAsync(ip, port);
             }
 
             public static UniTask StopClientAsync() {
-                UFlowUtils.Modules.ThrowIfNotLoaded<NetworkModule>();
+                ThrowIfNotLoaded();
                 return s_internalSingleton.m_transport.StopClientAsync();
             }
         }
 
         public static class HostAPI {
             public static UniTask StartHostAsync() {
-                UFlowUtils.Modules.ThrowIfNotLoaded<NetworkModule>();
+                ThrowIfNotLoaded();
                 return s_internalSingleton.m_transport.StartHostAsync();
             }
 
             public static UniTask StartHostAsync(ushort port) {
-                UFlowUtils.Modules.ThrowIfNotLoaded<NetworkModule>();
+                ThrowIfNotLoaded();
                 return s_internalSingleton.m_transport.StartHostAsync(port);
             }
 
             public static UniTask StopHostAsync() {
-                UFlowUtils.Modules.ThrowIfNotLoaded<NetworkModule>();
+                ThrowIfNotLoaded();
                 return s_internalSingleton.m_transport.StopHostAsync();
             }
         }
