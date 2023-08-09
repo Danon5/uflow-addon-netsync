@@ -1,7 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Cysharp.Threading.Tasks;
-using LiteNetLib;
 using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
@@ -13,7 +13,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public event Action ClientStartedEvent;
         public event Action ClientStoppedEvent;
         public event Action HostStartedEvent;
-        public event Action HostStoppedEvent; 
+        public event Action HostStoppedEvent;
+        private readonly Dictionary<ushort, NetClient> m_clients = new();
         public ConnectionState ServerState { get; private set; }
         public ConnectionState ClientState { get; private set; }
         public ConnectionState HostState { get; private set; }
@@ -42,6 +43,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (ServerStoppingOrStopped) throw new Exception("Server not yet started.");
             ServerState = ConnectionState.Stopping;
             await CleanupServer();
+            m_clients.Clear();
             ServerState = ConnectionState.Stopped;
             ServerStoppedEvent?.Invoke();
 #if UFLOW_DEBUG_ENABLED
@@ -108,39 +110,42 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #endif
         }
 
-        public abstract void SendServerRpc<T>(in T rpc, DeliveryMethod method) where T : unmanaged, INetRpc;
-        public abstract void SendClientRpc<T>(in T rpc, DeliveryMethod method) where T : unmanaged, INetRpc;
-        public abstract void SendClientRpc<T>(in T rpc, in NetPeer excludedClient, DeliveryMethod method) where T : unmanaged, INetRpc;
-        public abstract void SendTargetRpc<T>(in T rpc, in NetPeer target, DeliveryMethod method) where T : unmanaged, INetRpc;
+        public abstract void SendToServer<T>(ref T rpc, NetReliabilityType reliabilityType) where T : unmanaged, INetRpc;
+        public abstract void SendToClient<T>(ref T rpc, in NetClient target, NetReliabilityType reliabilityType) where T : unmanaged, INetRpc;
+        public abstract void SendToAllClients<T>(ref T rpc, NetReliabilityType reliabilityType) where T : unmanaged, INetRpc;
+        public abstract void SendToAllClientsExcept<T>(ref T rpc, in NetClient except, NetReliabilityType reliabilityType)
+            where T : unmanaged, INetRpc;
 
         public abstract void PollEvents();
 
         public abstract void ForceStop();
 
+        public NetClient GetClient(ushort id) => m_clients[id]; 
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void InvokeServerStarted() => ServerStartedEvent?.Invoke();
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void InvokeServerStopped() => ServerStoppedEvent?.Invoke();
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void InvokeClientStarted() => ClientStartedEvent?.Invoke();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void InvokeClientStopped() => ClientStoppedEvent?.Invoke();
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void InvokeHostStarted() => HostStartedEvent?.Invoke();
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void InvokeHostStopped() => HostStoppedEvent?.Invoke();
-        
+
         protected abstract UniTask<bool> SetupServer(ushort port);
-        
+
         protected abstract UniTask CleanupServer();
-        
+
         protected abstract UniTask<bool> SetupClient(string ip, ushort port);
-        
+
         protected abstract UniTask CleanupClient();
     }
 }

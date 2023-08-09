@@ -1,15 +1,15 @@
-﻿using Cysharp.Threading.Tasks;
-using LiteNetLib;
+﻿using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using Cysharp.Threading.Tasks;
 using UFlow.Core.Runtime;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     public sealed class NetworkModule : BaseAsyncBehaviourModule<NetworkModule> {
         private static NetworkModule s_internalSingleton;
         private readonly BaseTransport m_transport;
+        private readonly Dictionary<ushort, NetClient> m_connectedClients = new();
 
-        public NetworkModule() {
-            m_transport = new LiteNetTransport();
-        }
+        public NetworkModule() : this(new LiteNetTransport()) { }
 
         public NetworkModule(in BaseTransport transport) {
             m_transport = transport;
@@ -32,7 +32,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         public override void FinalUpdate() => m_transport.PollEvents();
-
+        
         public static class ServerAPI {
             public static UniTask StartServerAsync() {
                 ThrowIfNotLoaded();
@@ -49,12 +49,20 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 return s_internalSingleton.m_transport.StopServerAsync();
             }
 
-            public static void SendRpcToAll<T>(in T rpc, DeliveryMethod deliveryMethod = DeliveryMethod.ReliableOrdered) 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static void SendToAll<T>(in T rpc, NetReliabilityType netReliabilityType = NetReliabilityType.ReliableOrdered) 
                 where T : INetRpc {
                 
             }
 
-            public static void SendRpc<T>(in T rpc, in NetPeer peer, DeliveryMethod deliveryMethod = DeliveryMethod.ReliableOrdered) 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static void Send<T>(in T rpc, in NetClient client, NetReliabilityType netReliabilityType = NetReliabilityType.ReliableOrdered)
+                where T : INetRpc {
+                
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static void Send<T>(in T rpc, in ushort clientId, NetReliabilityType netReliabilityType = NetReliabilityType.ReliableOrdered)
                 where T : INetRpc {
                 
             }

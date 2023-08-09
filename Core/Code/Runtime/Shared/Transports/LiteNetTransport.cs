@@ -1,5 +1,6 @@
 ﻿
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Cysharp.Threading.Tasks;
 using LiteNetLib;
@@ -11,12 +12,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
     public sealed class LiteNetTransport : BaseTransport {
         private static readonly TimeSpan s_timeout = TimeSpan.FromSeconds(5);
         private static readonly int s_timeoutMS = (int)s_timeout.TotalMilliseconds;
+        private readonly Dictionary<ushort, NetPeer> m_peers = new();
         private readonly NetManager m_server;
         private readonly NetManager m_client;
         private readonly ByteBuffer m_buffer;
         private readonly NetDataWriter m_writer;
         private readonly NetDataReader m_reader;
-        private NetPeer m_clientPeer;
+        private NetPeer m_clientConnectionToServer;
 
         public LiteNetTransport() {
             var serverListener = new EventBasedNetListener();
@@ -39,37 +41,40 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             m_reader = new NetDataReader(m_writer);
         }
 
-        public override void SendServerRpc<T>(in T rpc, DeliveryMethod method) {
-            m_buffer.WriteUnsafe(rpc); // replace
+        public override void SendToServer<T>(ref T rpc, NetReliabilityType reliabilityType) {
+            SerializerAPI.Serialize(m_buffer, ref rpc);
             m_writer.Put(m_buffer.GetBytesToCursor());
-            m_client.SendBroadcast(m_writer, m_client.LocalPort);
-            ResetCursors();
-        }
-        
-        public override void SendClientRpc<T>(in T rpc, DeliveryMethod method) {
-            m_buffer.WriteUnsafe(rpc); // replace
-            m_writer.Put(m_buffer.GetBytesToCursor());
-            m_server.SendToAll(m_writer, method);
-            ResetCursors();
+            m_clientConnectionToServer.Send(m_writer, (DeliveryMethod)reliabilityType);
+            m_buffer.ResetCursor();
+            m_writer.Reset();
         }
 
-        public override void SendClientRpc<T>(in T rpc, in NetPeer excludedClient, DeliveryMethod method) {
-            m_buffer.WriteUnsafe(rpc); // replace
+        public override void SendToClient<T>(ref T rpc, in NetClient target, NetReliabilityType reliabilityType) {
+            SerializerAPI.Serialize(m_buffer, ref rpc);
             m_writer.Put(m_buffer.GetBytesToCursor());
-            m_server.SendToAll(m_writer, method, excludedClient);
-            ResetCursors();
+            m_peers[target.Id].Send(m_writer, (DeliveryMethod)reliabilityType);
+            m_buffer.ResetCursor();
+            m_writer.Reset();
         }
-        public override void SendTargetRpc<T>(in T rpc, in NetPeer target, DeliveryMethod method) {
-            m_buffer.WriteUnsafe(rpc); // replace
-            m_writer.Put(m_buffer.GetBytesToCursor());
-            target.Send(m_writer, method);
-            ResetCursors();
+        
+        public override void SendToAllClients<T>(ref T rpc, NetReliabilityType reliabilityType) {
+            foreach (var (id, _) in m_peers)
+                SendToClient(ref rpc, GetClient(id), reliabilityType);
+        }
+
+        public override void SendToAllClientsExcept<T>(ref T rpc, in NetClient except, NetReliabilityType reliabilityType) {
+            var exceptId = except.Id;
+            foreach (var (id, _) in m_peers) {
+                if (id == exceptId) continue;
+                SendToClient(ref rpc, GetClient(id), reliabilityType);
+            }
         }
 
         public override void PollEvents() {
             m_server.PollEvents();
             m_client.PollEvents();
         }
+        
         public override void ForceStop() {
             if (m_server.IsRunning) {
                 m_server.Stop();
@@ -98,17 +103,18 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (HostState == ConnectionState.Stopping)
                 Debug.Log("Server stopped.");
 #endif
+            m_peers.Clear();
         }
 
         protected override async UniTask<bool> SetupClient(string ip, ushort port) {
             m_client.Start();
-            m_clientPeer = m_client.Connect(ip, port, string.Empty);
+            m_clientConnectionToServer = m_client.Connect(ip, port, string.Empty);
             await UniTask.WaitUntil(() => m_client.IsRunning).Timeout(s_timeout);
 #if UFLOW_DEBUG_ENABLED
-            if (m_clientPeer == null)
+            if (m_clientConnectionToServer == null)
                 Debug.LogWarning($"Connection failed to ip {ip} on port {port}.");
 #endif
-            return m_clientPeer != null;
+            return m_clientConnectionToServer != null;
         }
 
         protected override async UniTask CleanupClient() {
