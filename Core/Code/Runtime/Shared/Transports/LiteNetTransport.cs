@@ -25,13 +25,15 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             serverListener.ConnectionRequestEvent += ServerOnConnectionRequest;
             serverListener.PeerConnectedEvent += ServerOnPeerConnected;
             serverListener.PeerDisconnectedEvent += ServerOnPeerDisconnected;
+            serverListener.NetworkReceiveEvent += ServerOnReceive;
             m_server = new NetManager(serverListener) {
                 AutoRecycle = true,
                 DisconnectTimeout = s_timeoutMS
             };
             var clientListener = new EventBasedNetListener();
-            clientListener.PeerConnectedEvent += ClientOnPeerConnected;
-            clientListener.PeerDisconnectedEvent += ClientOnPeerDisconnected;
+            clientListener.PeerConnectedEvent += ClientOnConnected;
+            clientListener.PeerDisconnectedEvent += ClientOnDisconnected;
+            clientListener.NetworkReceiveEvent += ClientOnReceive;
             m_client = new NetManager(clientListener) {
                 AutoRecycle = true,
                 DisconnectTimeout = s_timeoutMS
@@ -41,32 +43,46 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             m_reader = new NetDataReader(m_writer);
         }
 
-        public override void SendToServer<T>(ref T rpc, NetReliabilityType reliabilityType) {
-            SerializerAPI.Serialize(m_buffer, ref rpc);
+        public override void SendToServer<T>(in T rpc, NetReliabilityType reliabilityType = NetReliabilityType.ReliableOrdered) {
+            var rpcCopy = rpc;
+            SerializationAPI.Serialize(m_buffer, ref rpcCopy);
             m_writer.Put(m_buffer.GetBytesToCursor());
             m_clientConnectionToServer.Send(m_writer, (DeliveryMethod)reliabilityType);
-            m_buffer.ResetCursor();
-            m_writer.Reset();
+            ResetCursors();
         }
 
-        public override void SendToClient<T>(ref T rpc, in NetClient target, NetReliabilityType reliabilityType) {
-            SerializerAPI.Serialize(m_buffer, ref rpc);
+        public override void SendToClient<T>(in T rpc, in NetClient target, 
+                                             NetReliabilityType reliabilityType = NetReliabilityType.ReliableOrdered) {
+            var rpcCopy = rpc;
+            SerializationAPI.Serialize(m_buffer, ref rpcCopy);
             m_writer.Put(m_buffer.GetBytesToCursor());
-            m_peers[target.Id].Send(m_writer, (DeliveryMethod)reliabilityType);
-            m_buffer.ResetCursor();
-            m_writer.Reset();
+            m_peers[target.id].Send(m_writer, (DeliveryMethod)reliabilityType);
+            ResetCursors();
         }
-        
-        public override void SendToAllClients<T>(ref T rpc, NetReliabilityType reliabilityType) {
-            foreach (var (id, _) in m_peers)
-                SendToClient(ref rpc, GetClient(id), reliabilityType);
+        public override void SendToClient<T>(in T rpc, ushort targetId, 
+                                             NetReliabilityType reliabilityType = NetReliabilityType.ReliableOrdered) {
+            SendToClient(rpc, GetClient(targetId), reliabilityType);
         }
 
-        public override void SendToAllClientsExcept<T>(ref T rpc, in NetClient except, NetReliabilityType reliabilityType) {
-            var exceptId = except.Id;
+        public override void SendToAllClients<T>(in T rpc, NetReliabilityType reliabilityType = NetReliabilityType.ReliableOrdered) {
+            foreach (var (id, _) in m_peers)
+                SendToClient(rpc, GetClient(id), reliabilityType);
+        }
+
+        public override void SendToAllClientsExcept<T>(in T rpc, in NetClient except, 
+                                                       NetReliabilityType reliabilityType = NetReliabilityType.ReliableOrdered) {
+            var exceptId = except.id;
             foreach (var (id, _) in m_peers) {
                 if (id == exceptId) continue;
-                SendToClient(ref rpc, GetClient(id), reliabilityType);
+                SendToClient(rpc, GetClient(id), reliabilityType);
+            }
+        }
+        
+        public override void SendToAllClientsExcept<T>(in T rpc, ushort exceptId, 
+                                                       NetReliabilityType reliabilityType = NetReliabilityType.ReliableOrdered) {
+            foreach (var (id, _) in m_peers) {
+                if (id == exceptId) continue;
+                SendToClient(rpc, GetClient(id), reliabilityType);
             }
         }
 
@@ -131,6 +147,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         private void ServerOnPeerConnected(NetPeer peer) {
+            /*
+            if (HostStartingOrStarted)
+                SendToAllClientsExcept(new ClientConnectedRpc((ushort)peer.Id), (ushort)m_clientConnectionToServer.Id); 
+            else
+                SendToAllClients(new ClientConnectedRpc((ushort)peer.Id));
+                */
 #if UFLOW_DEBUG_ENABLED
             Debug.Log($"Peer {peer.Id} connected.");
 #endif
@@ -142,15 +164,27 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #endif
         }
 
-        private void ClientOnPeerConnected(NetPeer peer) {
+        private void ServerOnReceive(NetPeer peer, NetPacketReader reader, byte channel, DeliveryMethod deliveryMethod) {
+#if UFLOW_DEBUG_ENABLED
+            Debug.Log("Server received.");
+#endif
+        }
+
+        private void ClientOnConnected(NetPeer peer) {
 #if UFLOW_DEBUG_ENABLED
             Debug.Log("Connected.");
 #endif
         }
         
-        private void ClientOnPeerDisconnected(NetPeer peer, DisconnectInfo info) {
+        private void ClientOnDisconnected(NetPeer peer, DisconnectInfo info) {
 #if UFLOW_DEBUG_ENABLED
             Debug.Log($"Disconnected: {info.Reason}.");
+#endif
+        }
+
+        private void ClientOnReceive(NetPeer peer, NetPacketReader reader, byte channel, DeliveryMethod deliveryMethod) {
+#if UFLOW_DEBUG_ENABLED
+            Debug.Log("Client received.");
 #endif
         }
 

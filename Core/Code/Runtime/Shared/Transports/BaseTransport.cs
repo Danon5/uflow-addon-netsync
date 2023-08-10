@@ -14,6 +14,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public event Action ClientStoppedEvent;
         public event Action HostStartedEvent;
         public event Action HostStoppedEvent;
+        public event Action<NetClient> ClientConnectedEvent; 
+        public event Action<NetClient> ClientDisconnectedEvent; 
         private readonly Dictionary<ushort, NetClient> m_clients = new();
         public ConnectionState ServerState { get; private set; }
         public ConnectionState ClientState { get; private set; }
@@ -110,11 +112,29 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #endif
         }
 
-        public abstract void SendToServer<T>(ref T rpc, NetReliabilityType reliabilityType) where T : unmanaged, INetRpc;
-        public abstract void SendToClient<T>(ref T rpc, in NetClient target, NetReliabilityType reliabilityType) where T : unmanaged, INetRpc;
-        public abstract void SendToAllClients<T>(ref T rpc, NetReliabilityType reliabilityType) where T : unmanaged, INetRpc;
-        public abstract void SendToAllClientsExcept<T>(ref T rpc, in NetClient except, NetReliabilityType reliabilityType)
-            where T : unmanaged, INetRpc;
+        public abstract void SendToServer<T>(in T rpc, 
+                                             NetReliabilityType reliabilityType = NetReliabilityType.ReliableOrdered) 
+            where T : INetRpc;
+
+        public abstract void SendToClient<T>(in T rpc, in NetClient target, 
+                                             NetReliabilityType reliabilityType = NetReliabilityType.ReliableOrdered)
+            where T : INetRpc;
+        
+        public abstract void SendToClient<T>(in T rpc, ushort targetId, 
+                                             NetReliabilityType reliabilityType = NetReliabilityType.ReliableOrdered)
+            where T : INetRpc;
+        
+        public abstract void SendToAllClients<T>(in T rpc, 
+                                                 NetReliabilityType reliabilityType = NetReliabilityType.ReliableOrdered) 
+            where T : INetRpc;
+
+        public abstract void SendToAllClientsExcept<T>(in T rpc, in NetClient except,
+                                                       NetReliabilityType reliabilityType = NetReliabilityType.ReliableOrdered) 
+            where T : INetRpc;
+        
+        public abstract void SendToAllClientsExcept<T>(in T rpc, ushort exceptId, 
+                                                       NetReliabilityType reliabilityType = NetReliabilityType.ReliableOrdered) 
+            where T : INetRpc;
 
         public abstract void PollEvents();
 
@@ -139,6 +159,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void InvokeHostStopped() => HostStoppedEvent?.Invoke();
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected void InvokeClientConnected(in NetClient client) => ClientConnectedEvent?.Invoke(client);
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected void InvokeClientDisconnected(in NetClient client) => ClientDisconnectedEvent?.Invoke(client);
 
         protected abstract UniTask<bool> SetupServer(ushort port);
 

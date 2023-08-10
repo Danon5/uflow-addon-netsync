@@ -1,9 +1,9 @@
 ﻿namespace UFlow.Addon.NetSync.Core.Runtime {
-    public sealed class NetClient {
-        public ushort Id { get; }
+    public struct NetClient {
+        public readonly ushort id;
 
         public NetClient(ushort id) {
-            Id = id;
+            this.id = id;
         }
     }
 }
