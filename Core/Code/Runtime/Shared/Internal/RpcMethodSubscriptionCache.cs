@@ -1,18 +1,28 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UFlow.Addon.ECS.Core.Runtime;
+using UnityEngine.Scripting;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
-    internal sealed class RpcMethodSubscriptionCache<T> where T : INetRpc {
-        private static RpcMethodDelegate<T> s_methods;
+    internal static class RpcMethodSubscriptionCache<T> where T : INetRpc {
+        private static readonly Dictionary<RpcSendType, RpcMethodDelegate<T>> s_methods = new();
 
         static RpcMethodSubscriptionCache() => ExternalEngineEvents.clearStaticCachesEvent += ClearStaticCaches;
 
+        [Preserve]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void RegisterMethod(in RpcMethodDelegate<T> method) => s_methods += method;
+        public static void RegisterMethod(in RpcMethodDelegate<T> method, RpcSendType sendType) {
+            if (!s_methods.ContainsKey(sendType))
+                s_methods.Add(sendType, default);
+            s_methods[sendType] += method;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void InvokeMethods(in T rpc) => s_methods.Invoke(rpc);
+        public static void InvokeMethods(in T rpc, RpcSendType sendType) {
+            if (s_methods.TryGetValue(sendType, out var methods))
+                methods?.Invoke(rpc);
+        }
         
-        private static void ClearStaticCaches() => s_methods = null;
+        private static void ClearStaticCaches() => s_methods.Clear();
     }
 }
