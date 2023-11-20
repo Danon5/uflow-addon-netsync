@@ -36,7 +36,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 ServerStateChangedEvent?.Invoke(value);
             }
         }
-        
         public ConnectionState ClientState {
             get => m_clientState;
             set {
@@ -45,7 +44,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 ClientStateChangedEvent?.Invoke(value);
             }
         }
-        
         public ConnectionState HostState {
             get => m_hostState;
             set {
@@ -54,17 +52,11 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 HostStateChangedEvent?.Invoke(value);
             }
         }
-        
         public bool ServerStartingOrStarted => ServerState is ConnectionState.Starting or ConnectionState.Started;
-        
         public bool ServerStoppingOrStopped => ServerState is ConnectionState.Stopping or ConnectionState.Stopped;
-        
         public bool ClientStartingOrStarted => ClientState is ConnectionState.Starting or ConnectionState.Started;
-        
         public bool ClientStoppingOrStopped => ClientState is ConnectionState.Stopping or ConnectionState.Stopped;
-        
         public bool HostStartingOrStarted => HostState is ConnectionState.Starting or ConnectionState.Started;
-        
         public bool HostStoppingOrStopped => HostState is ConnectionState.Stopping or ConnectionState.Stopped;
 
         public LiteNetLibTransport() {
@@ -88,6 +80,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             m_buffer = new ByteBuffer(true);
             m_writer = new NetDataWriter(true);
             m_reader = new NetDataReader(m_writer);
+            RpcTypeIdMap.ServerRegisterAllTypes();
         }
         
         private static void ServerOnConnectionRequest(ConnectionRequest request) => request.Accept();
@@ -195,18 +188,20 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                                   in T rpc,
                                   NetworkReliabilityType networkReliabilityType = NetworkReliabilityType.ReliableOrdered) 
             where T : INetRpc {
-            WriteToBuffer(rpc);
+            BeginWrite(NetPacketType.RPC);
+            NetSerializer.SerializeRpc(m_buffer, rpc);
+            EndWrite();
             m_peers[client.id].Send(m_writer, (DeliveryMethod)networkReliabilityType);
-            ResetBuffer();
         }
 
         public void ServerSendToAll<T>(in T rpc,
                                        NetworkReliabilityType networkReliabilityType = NetworkReliabilityType.ReliableOrdered)
             where T : INetRpc {
-            WriteToBuffer(rpc);
+            BeginWrite(NetPacketType.RPC);
+            NetSerializer.SerializeRpc(m_buffer, rpc);
+            EndWrite();
             foreach (var (_, peer) in m_peers)
                 peer.Send(m_writer, (DeliveryMethod)networkReliabilityType);
-            ResetBuffer();
         }
 
         private async UniTask<bool> ServerSetupAsync(ushort port) {
@@ -246,10 +241,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         private void ServerOnPeerConnected(NetPeer peer) {
-            m_peers.Add((ushort)peer.Id, peer);
 #if UFLOW_DEBUG_ENABLED
             Debug.Log($"Peer {peer.Id} connected.");
 #endif
+            m_peers.Add((ushort)peer.Id, peer);
+            BeginWrite(NetPacketType.Handshake);
+            EndWrite();
+            peer.Send(m_writer, DeliveryMethod.ReliableOrdered);
         }
         
         private void ServerOnPeerDisconnected(NetPeer peer, DisconnectInfo info) {
@@ -260,8 +258,11 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         private void ServerOnReceive(NetPeer peer, NetPacketReader reader, byte channel, DeliveryMethod deliveryMethod) {
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log("Server received.");
+            Debug.Log("Server received packet.");
 #endif
+            BeginRead(reader, out var packetType);
+            NetDeserializer.Deserialize(m_buffer, packetType);
+            EndRead(reader);
         }
 
         private void ClientOnConnected(NetPeer peer) {
@@ -278,20 +279,31 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         private void ClientOnReceive(NetPeer peer, NetPacketReader reader, byte channel, DeliveryMethod deliveryMethod) {
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log("Client received.");
+            Debug.Log("Client received packet.");
 #endif
+            BeginRead(reader, out var packetType);
+            NetDeserializer.Deserialize(m_buffer, packetType);
+            EndRead(reader);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void WriteToBuffer<T>(T rpc) where T : INetRpc {
-            SerializationAPI.Serialize(m_buffer, ref rpc);
+        private void BeginWrite(NetPacketType type) {
+            m_writer.Reset();
+            m_buffer.Reset();
+            m_buffer.Write((byte)type);
+        }
+
+        private void EndWrite() {
             m_writer.Put(m_buffer.GetBytesToCursor());
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ResetBuffer() {
-            m_writer.Reset();
-            m_buffer.ResetCursor();
+        private void BeginRead(NetDataReader reader, out NetPacketType packetType) {
+            m_buffer.Reset();
+            m_buffer.TransferBytesToBuffer(reader.RawData, 4, reader.AvailableBytes);
+            packetType = (NetPacketType)m_buffer.ReadByte();
+        }
+
+        private void EndRead(NetPacketReader reader) {
+            reader.Recycle();
         }
     }
 }
