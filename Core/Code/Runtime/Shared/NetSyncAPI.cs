@@ -3,6 +3,10 @@
 namespace UFlow.Addon.NetSync.Core.Runtime {
     public static class NetSyncAPI {
         public static class ServerAPI {
+            public static ConnectionState State => NetSyncModule.InternalSingleton.Transport.ServerState;
+            public static bool StartingOrStarted => NetSyncModule.InternalSingleton.Transport.ServerStartingOrStarted;
+            public static bool StoppingOrStopped => NetSyncModule.InternalSingleton.Transport.ServerStoppingOrStopped;
+            
             public static UniTask StartServerAsync() {
                 NetSyncModule.ThrowIfNotLoaded();
                 return NetSyncModule.InternalSingleton.Transport.StartServerAsync();
@@ -30,6 +34,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         public static class ClientAPI {
+            public static ConnectionState State => NetSyncModule.InternalSingleton.Transport.ClientState;
+            public static bool StartingOrStarted => NetSyncModule.InternalSingleton.Transport.ClientStartingOrStarted;
+            public static bool StoppingOrStopped => NetSyncModule.InternalSingleton.Transport.ClientStoppingOrStopped;
+            
             public static UniTask StartClientAsync() {
                 NetSyncModule.ThrowIfNotLoaded();
                 return NetSyncModule.InternalSingleton.Transport.StartClientAsync();
@@ -47,6 +55,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         public static class HostAPI {
+            public static ConnectionState State => NetSyncModule.InternalSingleton.Transport.HostState;
+            public static bool StartingOrStarted => NetSyncModule.InternalSingleton.Transport.HostStartingOrStarted;
+            public static bool StoppingOrStopped => NetSyncModule.InternalSingleton.Transport.HostStoppingOrStopped;
+            
             public static UniTask StartHostAsync() {
                 NetSyncModule.ThrowIfNotLoaded();
                 return NetSyncModule.InternalSingleton.Transport.StartHostAsync();

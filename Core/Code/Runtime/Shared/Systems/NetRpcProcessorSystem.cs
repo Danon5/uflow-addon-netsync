@@ -1,5 +1,6 @@
 ﻿using UFlow.Addon.ECS.Core.Runtime;
 using UFlow.Addon.NetSync.Core.Runtime.SystemGroups;
+using UnityEngine;
 using UnityEngine.Scripting;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
@@ -10,7 +11,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public NetRpcProcessorSystem(in World world) : base(in world) { }
 
         protected override void Run(World world) {
-            
+            Debug.Log("Running");
         }
     }
 }
