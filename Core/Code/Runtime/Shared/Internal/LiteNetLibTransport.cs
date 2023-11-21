@@ -246,6 +246,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #endif
             m_peers.Add((ushort)peer.Id, peer);
             BeginWrite(NetPacketType.Handshake);
+            NetSerializer.SerializeHandshake(m_buffer);
             EndWrite();
             peer.Send(m_writer, DeliveryMethod.ReliableOrdered);
         }

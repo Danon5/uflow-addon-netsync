@@ -11,25 +11,42 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public static void Deserialize(ByteBuffer buffer, NetPacketType packetType) {
             switch (packetType) {
                 case NetPacketType.Handshake:
-                    Debug.Log("Handshake received");
+                    DeserializeHandshake(buffer);
                     break;
                 case NetPacketType.RPC:
-                    var id = buffer.ReadUShort();
-                    Debug.Log($"Read RPC id {id}");
-                    if (!s_deserializeRpcDelegates.TryGetValue(id, out var @delegate)) {
-                        @delegate = typeof(RpcDeserializer<>)
-                            .MakeGenericType(RpcTypeIdMap.GetTypeAuto(id))
-                            .GetMethod("DeserializeRpc")!
-                            .CreateDelegate(typeof(DeserializeRpcDelegate)) as DeserializeRpcDelegate;
-                        s_deserializeRpcDelegates.Add(id, @delegate);
-                        Debug.Log($"Caching delegate for rpc {RpcTypeIdMap.GetTypeAuto(id).Name}");
-                    }
-                    @delegate!.Invoke(buffer);
-                    Debug.Log($"Rpc received with id {id}");
+                    DeserializeRpc(buffer);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+
+        private static void DeserializeHandshake(ByteBuffer buffer) {
+#if UFLOW_DEBUG_ENABLED
+            Debug.Log("Deserializing Handshake.");
+#endif
+            var count = buffer.ReadUShort();
+            for (var i = 0; i < count; i++) {
+                var id = buffer.ReadUShort();
+                var str = buffer.ReadString();
+                var type = Type.GetType(str);
+                RpcTypeIdMap.ClientRegisterType(type, id);
+            }
+        }
+
+        private static void DeserializeRpc(ByteBuffer buffer) {
+            var id = buffer.ReadUShort();
+#if UFLOW_DEBUG_ENABLED
+            Debug.Log($"Deserializing RPC {RpcTypeIdMap.GetTypeAuto(id).Name}.");
+#endif
+            if (!s_deserializeRpcDelegates.TryGetValue(id, out var @delegate)) {
+                @delegate = typeof(RpcDeserializer<>)
+                    .MakeGenericType(RpcTypeIdMap.GetTypeAuto(id))
+                    .GetMethod("DeserializeRpc")!
+                    .CreateDelegate(typeof(DeserializeRpcDelegate)) as DeserializeRpcDelegate;
+                s_deserializeRpcDelegates.Add(id, @delegate);
+            }
+            @delegate!.Invoke(buffer);
         }
 
         private delegate void DeserializeRpcDelegate(ByteBuffer buffer);
@@ -38,9 +55,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             public static event Action<T> RpcDeserializedEvent;
 
             [Preserve]
-            public static void DeserializeRpc(ByteBuffer buffer) {
+            public static void DeserializeRpcInternal(ByteBuffer buffer) {
                 RpcDeserializedEvent?.Invoke(SerializationAPI.Deserialize<T>(buffer));
-                Debug.Log($"Deserialized {typeof(T)}");
             }
         } 
     }

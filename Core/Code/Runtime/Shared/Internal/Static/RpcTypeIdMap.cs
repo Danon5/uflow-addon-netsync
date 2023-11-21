@@ -18,6 +18,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 ServerRegisterType(type);
         }
 
+        public static int ServerGetTypeCount() => s_serverIdToTypeMap.Count;
+        
+        public static IEnumerable<KeyValuePair<ushort, Type>> ServerGetMapEnumerable() => s_serverIdToTypeMap;
+
         public static void ServerRegisterType(Type type) {
             var id = s_serverNextId++;
             s_serverTypeToIdMap[type] = id;
