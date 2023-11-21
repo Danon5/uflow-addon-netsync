@@ -23,7 +23,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         private readonly ByteBuffer m_buffer;
         private readonly NetDataWriter m_writer;
         private readonly NetDataReader m_reader;
-        private NetPeer m_clientConnectionToServer;
         private ConnectionState m_serverState;
         private ConnectionState m_clientState;
         private ConnectionState m_hostState;
@@ -58,6 +57,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public bool ClientStoppingOrStopped => ClientState is ConnectionState.Stopping or ConnectionState.Stopped;
         public bool HostStartingOrStarted => HostState is ConnectionState.Starting or ConnectionState.Started;
         public bool HostStoppingOrStopped => HostState is ConnectionState.Stopping or ConnectionState.Stopped;
+        public NetPeer ServerPeer { get; private set; }
 
         public LiteNetLibTransport() {
             var serverListener = new EventBasedNetListener();
@@ -184,6 +184,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public NetworkClient GetClient(ushort id) => m_clients[id];
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public NetworkClient GetClient(NetPeer peer) => m_clients[(ushort)peer.Id];
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetClient(ushort id, out NetworkClient client) => m_clients.TryGetValue(id, out client);
@@ -240,19 +243,19 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public void ClientSend<T>(in T rpc,
                                   NetworkReliabilityType networkReliabilityType = NetworkReliabilityType.ReliableOrdered) 
             where T : INetRpc {
-            if (m_clientConnectionToServer.ConnectionState != LiteNetLib.ConnectionState.Connected)
+            if (ServerPeer.ConnectionState != LiteNetLib.ConnectionState.Connected)
                 throw new Exception("Cannot send rpc when not connected.");
             BeginWrite(NetPacketType.RPC);
             NetSerializer.SerializeRpc(m_buffer, rpc);
             EndWrite();
-            m_clientConnectionToServer.Send(m_writer, (DeliveryMethod)networkReliabilityType);
+            ServerPeer.Send(m_writer, (DeliveryMethod)networkReliabilityType);
         }
 
         public void ClientPeerHandshakeResponse() {
             BeginWrite(NetPacketType.HandshakeResponse);
             NetSerializer.SerializeHandshakeResponse(m_buffer);
             EndWrite();
-            m_clientConnectionToServer.Send(m_writer, DeliveryMethod.ReliableOrdered);
+            ServerPeer.Send(m_writer, DeliveryMethod.ReliableOrdered);
         }
 
         public void ServerAuthorizePeer(NetPeer peer) {
@@ -284,13 +287,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         private async UniTask<bool> ClientSetupAsync(string ip, ushort port) {
             m_client.Start();
-            m_clientConnectionToServer = m_client.Connect(ip, port, string.Empty);
+            ServerPeer = m_client.Connect(ip, port, string.Empty);
             await UniTask.WaitUntil(() => m_client.IsRunning).Timeout(s_timeout);
 #if UFLOW_DEBUG_ENABLED
-            if (m_clientConnectionToServer == null)
+            if (ServerPeer == null)
                 Debug.LogWarning($"Connection failed to ip {ip} on port {port}.");
 #endif
-            return m_clientConnectionToServer != null;
+            return ServerPeer != null;
         }
 
         private async UniTask ClientCleanupAsync() {

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using LiteNetLib;
 using UFlow.Addon.Serialization.Core.Runtime;
+using UFlow.Core.Runtime;
 using UnityEngine;
 using UnityEngine.Scripting;
 
@@ -20,7 +21,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                     NetSyncModule.InternalSingleton.Transport.ServerAuthorizePeer(peer);
                     break;
                 case NetPacketType.RPC:
-                    DeserializeRpc(buffer);
+                    DeserializeRpc(buffer, peer);
                     break;
                 default:
                     throw new Exception($"Receiving unhandled packet {packetType}.");
@@ -46,7 +47,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             
         }
 
-        private static void DeserializeRpc(ByteBuffer buffer) {
+        private static void DeserializeRpc(ByteBuffer buffer, NetPeer peer) {
             var id = buffer.ReadUShort();
 #if UFLOW_DEBUG_ENABLED
             Debug.Log($"Deserializing rpc {RpcTypeIdMap.GetTypeFromNetworkId(id).Name}.");
@@ -58,17 +59,29 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                     .CreateDelegate(typeof(DeserializeRpcDelegate)) as DeserializeRpcDelegate;
                 s_deserializeRpcDelegates.Add(id, @delegate);
             }
-            @delegate!.Invoke(buffer);
+            @delegate!.Invoke(buffer, peer);
         }
 
-        private delegate void DeserializeRpcDelegate(ByteBuffer buffer);
+        private delegate void DeserializeRpcDelegate(ByteBuffer buffer, NetPeer peer);
 
-        internal static class RpcDeserializer<T> where T : new() {
-            public static event Action<T> RpcDeserializedEvent;
+        internal static class RpcDeserializer<T> where T : INetRpc {
+            public static event ClientRpcHandlerDelegate<T> ClientRpcDeserializedEvent;
+            public static event ServerRpcHandlerDelegate<T> ServerRpcDeserializedEvent;
+
+            static RpcDeserializer() => UnityGlobalEventHelper.RuntimeInitializeOnLoad += ClearStaticCache;
 
             [Preserve]
-            public static void DeserializeRpcInternal(ByteBuffer buffer) {
-                RpcDeserializedEvent?.Invoke(SerializationAPI.Deserialize<T>(buffer));
+            public static void DeserializeRpcInternal(ByteBuffer buffer, NetPeer peer) {
+                if (ReferenceEquals(peer, NetSyncModule.InternalSingleton.Transport.ServerPeer))
+                    ClientRpcDeserializedEvent?.Invoke(SerializationAPI.Deserialize<T>(buffer));
+                else
+                    ServerRpcDeserializedEvent?.Invoke(SerializationAPI.Deserialize<T>(buffer),
+                        NetSyncModule.InternalSingleton.Transport.GetClient(peer));
+            }
+
+            private static void ClearStaticCache() {
+                ClientRpcDeserializedEvent = default;
+                ServerRpcDeserializedEvent = default;
             }
         } 
     }

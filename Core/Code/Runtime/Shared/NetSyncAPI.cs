@@ -56,6 +56,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.ServerSendToAllExceptHost(rpc);
             }
+            
+            public static void RegisterHandler<T>(in ServerRpcHandlerDelegate<T> handler) where T : INetRpc => 
+                NetDeserializer.RpcDeserializer<T>.ServerRpcDeserializedEvent += handler;
+
+            public static void UnregisterHandler<T>(in ServerRpcHandlerDelegate<T> handler) where T : INetRpc => 
+                NetDeserializer.RpcDeserializer<T>.ServerRpcDeserializedEvent -= handler;
         }
 
         public static class ClientAPI {
@@ -77,7 +83,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 NetSyncModule.ThrowIfNotLoaded();
                 return NetSyncModule.InternalSingleton.Transport.StopClientAsync();
             }
-            
+
+            public static void RegisterHandler<T>(in ClientRpcHandlerDelegate<T> handler) where T : INetRpc => 
+                NetDeserializer.RpcDeserializer<T>.ClientRpcDeserializedEvent += handler;
+
+            public static void UnregisterHandler<T>(in ClientRpcHandlerDelegate<T> handler) where T : INetRpc => 
+                NetDeserializer.RpcDeserializer<T>.ClientRpcDeserializedEvent -= handler;
+
             public static void Send<T>(in T rpc) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.ClientSend(rpc);
