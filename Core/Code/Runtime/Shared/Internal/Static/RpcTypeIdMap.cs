@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UFlow.Addon.Serialization.Core.Runtime;
 using UFlow.Core.Runtime;
+using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     internal static class RpcTypeIdMap {
@@ -64,6 +65,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             s_networkTypeToIdMap.Clear();
             s_networkIdToTypeMap.Clear();
             s_networkNextId = 1;
+            s_initialized = false;
         }
     }
 }
