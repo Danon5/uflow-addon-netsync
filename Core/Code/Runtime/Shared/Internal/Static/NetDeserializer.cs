@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using LiteNetLib;
 using UFlow.Addon.Serialization.Core.Runtime;
 using UnityEngine;
 using UnityEngine.Scripting;
@@ -8,16 +9,21 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
     internal static class NetDeserializer {
         private static readonly Dictionary<ushort, DeserializeRpcDelegate> s_deserializeRpcDelegates = new();
 
-        public static void Deserialize(ByteBuffer buffer, NetPacketType packetType) {
+        public static void Deserialize(ByteBuffer buffer, NetPacketType packetType, NetPeer peer) {
             switch (packetType) {
                 case NetPacketType.Handshake:
                     DeserializeHandshake(buffer);
+                    NetSyncModule.InternalSingleton.Transport.ClientPeerHandshakeResponse();
+                    break;
+                case NetPacketType.HandshakeResponse:
+                    DeserializeHandshakeResponse(buffer);
+                    NetSyncModule.InternalSingleton.Transport.ServerAuthorizePeer(peer);
                     break;
                 case NetPacketType.RPC:
                     DeserializeRpc(buffer);
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    throw new Exception($"Receiving unhandled packet {packetType}.");
             }
         }
 
@@ -31,6 +37,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 var id = buffer.ReadUShort();
                 RpcTypeIdMap.RegisterNetworkRpc(hash, id);
             }
+        }
+        
+        private static void DeserializeHandshakeResponse(ByteBuffer buffer) {
+#if UFLOW_DEBUG_ENABLED
+            Debug.Log("Deserializing handshake response.");
+#endif
+            
         }
 
         private static void DeserializeRpc(ByteBuffer buffer) {

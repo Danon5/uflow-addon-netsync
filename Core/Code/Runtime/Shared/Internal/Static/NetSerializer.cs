@@ -10,6 +10,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
         }
         
+        public static void SerializeHandshakeResponse(ByteBuffer buffer) { }
+        
         public static void SerializeRpc<T>(ByteBuffer buffer, T rpc) where T : INetRpc {
             buffer.Write(RpcTypeIdMap.GetNetworkIdFromType(typeof(T)));
             SerializationAPI.Serialize(buffer, ref rpc);

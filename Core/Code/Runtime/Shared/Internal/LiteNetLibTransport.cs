@@ -82,8 +82,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             m_reader = new NetDataReader(m_writer);
             RpcTypeIdMap.RegisterAllLocalRpcsIfRequired();
         }
-        
-        private static void ServerOnConnectionRequest(ConnectionRequest request) => request.Accept();
 
         public async UniTask StartServerAsync(ushort port = c_default_port) {
             if (ServerStartingOrStarted) throw new Exception("Server already started.");
@@ -190,10 +188,17 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetClient(ushort id, out NetworkClient client) => m_clients.TryGetValue(id, out client);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool ServerIsHostClient(in NetworkClient client) => HostStartingOrStarted && client.id == 0;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool ServerIsHostClient(ushort clientId) => HostStartingOrStarted && clientId == 0;
+
         public void ServerSend<T>(in T rpc,
                                   in NetworkClient client,
                                   NetworkReliabilityType networkReliabilityType = NetworkReliabilityType.ReliableOrdered) 
             where T : INetRpc {
+            if (m_clients.Count == 0) return;
             BeginWrite(NetPacketType.RPC);
             NetSerializer.SerializeRpc(m_buffer, rpc);
             EndWrite();
@@ -203,23 +208,25 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public void ServerSendToAll<T>(in T rpc, 
                                        NetworkReliabilityType networkReliabilityType = NetworkReliabilityType.ReliableOrdered)
             where T : INetRpc {
+            if (m_clients.Count == 0) return;
             BeginWrite(NetPacketType.RPC);
             NetSerializer.SerializeRpc(m_buffer, rpc);
             EndWrite();
-            foreach (var (_, peer) in m_peers)
-                peer.Send(m_writer, (DeliveryMethod)networkReliabilityType);
+            foreach (var (id, client) in m_clients)
+                m_peers[id].Send(m_writer, (DeliveryMethod)networkReliabilityType);
         }
         
         public void ServerSendToAllExcept<T>(in T rpc, 
-                                             in NetworkClient client,
+                                             in NetworkClient excludedClient,
                                              NetworkReliabilityType networkReliabilityType = NetworkReliabilityType.ReliableOrdered)
             where T : INetRpc {
+            if (m_clients.Count == 0) return;
             BeginWrite(NetPacketType.RPC);
             NetSerializer.SerializeRpc(m_buffer, rpc);
             EndWrite();
-            foreach (var (id, peer) in m_peers) {
-                if (id == client.id) continue;
-                peer.Send(m_writer, (DeliveryMethod)networkReliabilityType);
+            foreach (var (id, client) in m_clients) {
+                if (id == excludedClient.id) continue;
+                m_peers[id].Send(m_writer, (DeliveryMethod)networkReliabilityType);
             }
         }
 
@@ -229,7 +236,34 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (!HostStartingOrStarted) return;
             ServerSendToAllExcept(rpc, m_clients[0], networkReliabilityType);
         }
+        
+        public void ClientSend<T>(in T rpc,
+                                  NetworkReliabilityType networkReliabilityType = NetworkReliabilityType.ReliableOrdered) 
+            where T : INetRpc {
+            if (m_clientConnectionToServer.ConnectionState != LiteNetLib.ConnectionState.Connected)
+                throw new Exception("Cannot send rpc when not connected.");
+            BeginWrite(NetPacketType.RPC);
+            NetSerializer.SerializeRpc(m_buffer, rpc);
+            EndWrite();
+            m_clientConnectionToServer.Send(m_writer, (DeliveryMethod)networkReliabilityType);
+        }
 
+        public void ClientPeerHandshakeResponse() {
+            BeginWrite(NetPacketType.HandshakeResponse);
+            NetSerializer.SerializeHandshakeResponse(m_buffer);
+            EndWrite();
+            m_clientConnectionToServer.Send(m_writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public void ServerAuthorizePeer(NetPeer peer) {
+#if UFLOW_DEBUG_ENABLED
+            Debug.Log($"Authorized peer {peer.Id}.");
+#endif
+            m_clients.Add((ushort)peer.Id, new NetworkClient((ushort)peer.Id));
+        }
+        
+        private static void ServerOnConnectionRequest(ConnectionRequest request) => request.Accept();
+        
         private async UniTask<bool> ServerSetupAsync(ushort port) {
             var result = m_server.Start(port);
             await UniTask.WaitUntil(() => m_server.IsRunning).Timeout(s_timeout);
@@ -291,7 +325,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             Debug.Log("Server received packet.");
 #endif
             BeginRead(reader, out var packetType);
-            NetDeserializer.Deserialize(m_buffer, packetType);
+            NetDeserializer.Deserialize(m_buffer, packetType, peer);
             EndRead(reader);
         }
 
@@ -313,7 +347,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             Debug.Log("Client received packet.");
 #endif
             BeginRead(reader, out var packetType);
-            NetDeserializer.Deserialize(m_buffer, packetType);
+            NetDeserializer.Deserialize(m_buffer, packetType, peer);
             EndRead(reader);
         }
 

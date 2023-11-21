@@ -40,15 +40,15 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 NetSyncModule.InternalSingleton.Transport.ServerSendToAll(rpc);
             }
             
-            public static void SendToAllExcept<T>(in T rpc, in NetworkClient client) where T : INetRpc {
+            public static void SendToAllExcept<T>(in T rpc, in NetworkClient excludedClient) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
-                NetSyncModule.InternalSingleton.Transport.ServerSendToAllExcept(rpc, client);
+                NetSyncModule.InternalSingleton.Transport.ServerSendToAllExcept(rpc, excludedClient);
             }
             
-            public static void SendToAllExcept<T>(in T rpc, ushort clientId) where T : INetRpc {
+            public static void SendToAllExcept<T>(in T rpc, ushort excludedClientId) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
-                if (!NetSyncModule.InternalSingleton.Transport.TryGetClient(clientId, out var client))
-                    throw new Exception($"No client with id {clientId}.");
+                if (!NetSyncModule.InternalSingleton.Transport.TryGetClient(excludedClientId, out var client))
+                    throw new Exception($"No client with id {excludedClientId}.");
                 NetSyncModule.InternalSingleton.Transport.ServerSendToAllExcept(rpc, client);
             }
             
@@ -76,6 +76,11 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             public static UniTask StopClientAsync() {
                 NetSyncModule.ThrowIfNotLoaded();
                 return NetSyncModule.InternalSingleton.Transport.StopClientAsync();
+            }
+            
+            public static void Send<T>(in T rpc) where T : INetRpc {
+                NetSyncModule.ThrowIfNotLoaded();
+                NetSyncModule.InternalSingleton.Transport.ClientSend(rpc);
             }
         }
 
