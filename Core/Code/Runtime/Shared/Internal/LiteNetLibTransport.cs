@@ -29,7 +29,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         public ConnectionState ServerState {
             get => m_serverState;
-            set {
+            private set {
                 if (value == m_serverState) return;
                 m_serverState = value;
                 ServerStateChangedEvent?.Invoke(value);
@@ -37,7 +37,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
         public ConnectionState ClientState {
             get => m_clientState;
-            set {
+            private set {
                 if (value == m_clientState) return;
                 m_clientState = value;
                 ClientStateChangedEvent?.Invoke(value);
@@ -45,7 +45,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
         public ConnectionState HostState {
             get => m_hostState;
-            set {
+            private set {
                 if (value == m_hostState) return;
                 m_hostState = value;
                 HostStateChangedEvent?.Invoke(value);
