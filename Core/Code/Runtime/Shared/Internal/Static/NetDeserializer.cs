@@ -42,7 +42,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (!s_deserializeRpcDelegates.TryGetValue(id, out var @delegate)) {
                 @delegate = typeof(RpcDeserializer<>)
                     .MakeGenericType(RpcTypeIdMap.GetTypeAuto(id))
-                    .GetMethod("DeserializeRpc")!
+                    .GetMethod("DeserializeRpcInternal")!
                     .CreateDelegate(typeof(DeserializeRpcDelegate)) as DeserializeRpcDelegate;
                 s_deserializeRpcDelegates.Add(id, @delegate);
             }
