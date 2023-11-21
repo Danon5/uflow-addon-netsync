@@ -44,7 +44,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #if UFLOW_DEBUG_ENABLED
             Debug.Log("Deserializing handshake response.");
 #endif
-            
         }
 
         private static void DeserializeRpc(ByteBuffer buffer, NetPeer peer) {
