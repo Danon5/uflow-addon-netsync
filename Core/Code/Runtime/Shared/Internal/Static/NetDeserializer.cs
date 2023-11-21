@@ -23,25 +23,24 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         private static void DeserializeHandshake(ByteBuffer buffer) {
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log("Deserializing Handshake.");
+            Debug.Log("Deserializing handshake.");
 #endif
             var count = buffer.ReadUShort();
             for (var i = 0; i < count; i++) {
+                var hash = buffer.ReadULong();
                 var id = buffer.ReadUShort();
-                var str = buffer.ReadString();
-                var type = Type.GetType(str);
-                RpcTypeIdMap.ClientRegisterType(type, id);
+                RpcTypeIdMap.RegisterNetworkRpc(hash, id);
             }
         }
 
         private static void DeserializeRpc(ByteBuffer buffer) {
             var id = buffer.ReadUShort();
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log($"Deserializing RPC {RpcTypeIdMap.GetTypeAuto(id).Name}.");
+            Debug.Log($"Deserializing rpc {RpcTypeIdMap.GetTypeFromNetworkId(id).Name}.");
 #endif
             if (!s_deserializeRpcDelegates.TryGetValue(id, out var @delegate)) {
                 @delegate = typeof(RpcDeserializer<>)
-                    .MakeGenericType(RpcTypeIdMap.GetTypeAuto(id))
+                    .MakeGenericType(RpcTypeIdMap.GetTypeFromNetworkId(id))
                     .GetMethod("DeserializeRpcInternal")!
                     .CreateDelegate(typeof(DeserializeRpcDelegate)) as DeserializeRpcDelegate;
                 s_deserializeRpcDelegates.Add(id, @delegate);

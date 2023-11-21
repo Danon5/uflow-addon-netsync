@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Cysharp.Threading.Tasks;
 using LiteNetLib;
 using LiteNetLib.Utils;
@@ -79,7 +80,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             m_buffer = new ByteBuffer(true);
             m_writer = new NetDataWriter(true);
             m_reader = new NetDataReader(m_writer);
-            RpcTypeIdMap.ServerRegisterAllTypes();
+            RpcTypeIdMap.RegisterAllLocalRpcsIfRequired();
         }
         
         private static void ServerOnConnectionRequest(ConnectionRequest request) => request.Accept();
@@ -183,8 +184,14 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
         }
 
-        public void ServerSend<T>(in NetworkClient client, 
-                                  in T rpc,
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public NetworkClient GetClient(ushort id) => m_clients[id];
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryGetClient(ushort id, out NetworkClient client) => m_clients.TryGetValue(id, out client);
+
+        public void ServerSend<T>(in T rpc,
+                                  in NetworkClient client,
                                   NetworkReliabilityType networkReliabilityType = NetworkReliabilityType.ReliableOrdered) 
             where T : INetRpc {
             BeginWrite(NetPacketType.RPC);
@@ -193,7 +200,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             m_peers[client.id].Send(m_writer, (DeliveryMethod)networkReliabilityType);
         }
 
-        public void ServerSendToAll<T>(in T rpc,
+        public void ServerSendToAll<T>(in T rpc, 
                                        NetworkReliabilityType networkReliabilityType = NetworkReliabilityType.ReliableOrdered)
             where T : INetRpc {
             BeginWrite(NetPacketType.RPC);
@@ -202,10 +209,31 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             foreach (var (_, peer) in m_peers)
                 peer.Send(m_writer, (DeliveryMethod)networkReliabilityType);
         }
+        
+        public void ServerSendToAllExcept<T>(in T rpc, 
+                                             in NetworkClient client,
+                                             NetworkReliabilityType networkReliabilityType = NetworkReliabilityType.ReliableOrdered)
+            where T : INetRpc {
+            BeginWrite(NetPacketType.RPC);
+            NetSerializer.SerializeRpc(m_buffer, rpc);
+            EndWrite();
+            foreach (var (id, peer) in m_peers) {
+                if (id == client.id) continue;
+                peer.Send(m_writer, (DeliveryMethod)networkReliabilityType);
+            }
+        }
+
+        public void ServerSendToAllExceptHost<T>(in T rpc,
+                                                 NetworkReliabilityType networkReliabilityType = NetworkReliabilityType.ReliableOrdered)
+            where T : INetRpc {
+            if (!HostStartingOrStarted) return;
+            ServerSendToAllExcept(rpc, m_clients[0], networkReliabilityType);
+        }
 
         private async UniTask<bool> ServerSetupAsync(ushort port) {
             var result = m_server.Start(port);
             await UniTask.WaitUntil(() => m_server.IsRunning).Timeout(s_timeout);
+            RpcTypeIdMap.ServerRegisterNetworkRpcs();
             return result;
         }
 
@@ -217,6 +245,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 Debug.Log("Server stopped.");
 #endif
             m_peers.Clear();
+            RpcTypeIdMap.ClearNetworkRpcs();
         }
 
         private async UniTask<bool> ClientSetupAsync(string ip, ushort port) {
@@ -237,6 +266,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (HostState == ConnectionState.Stopping)
                 Debug.Log("Client stopped.");
 #endif
+            RpcTypeIdMap.ClearNetworkRpcs();
         }
 
         private void ServerOnPeerConnected(NetPeer peer) {
@@ -272,6 +302,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
         
         private void ClientOnDisconnected(NetPeer peer, DisconnectInfo info) {
+            RpcTypeIdMap.ClearNetworkRpcs();
 #if UFLOW_DEBUG_ENABLED
             Debug.Log($"Disconnected: {info.Reason}.");
 #endif

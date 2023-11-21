@@ -1,78 +1,69 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using UFlow.Addon.Serialization.Core.Runtime;
 using UFlow.Core.Runtime;
-using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     internal static class RpcTypeIdMap {
-        private static readonly Dictionary<Type, ushort> s_serverTypeToIdMap = new();
-        private static readonly Dictionary<ushort, Type> s_serverIdToTypeMap = new();
-        private static readonly Dictionary<Type, ushort> s_clientTypeToIdMap = new();
-        private static readonly Dictionary<ushort, Type> s_clientIdToTypeMap = new();
-        private static ushort s_serverNextId = 1;
+        private static readonly Dictionary<Type, ulong> s_localTypeToHashMap = new();
+        private static readonly Dictionary<ulong, Type> s_localHashToTypeMap = new();
+        private static readonly Dictionary<Type, ushort> s_networkTypeToIdMap = new();
+        private static readonly Dictionary<ushort, Type> s_networkIdToTypeMap = new();
+        private static ushort s_networkNextId = 1;
+        private static bool s_initialized;
 
         static RpcTypeIdMap() => UnityGlobalEventHelper.RuntimeInitializeOnLoad += ClearStaticCache;
 
-        public static void ServerRegisterAllTypes() {
+        public static void RegisterAllLocalRpcsIfRequired() {
+            if (s_initialized) return;
             foreach (var type in UFlowUtils.Reflection.GetInheritors<INetRpc>(false, UFlowUtils.Reflection.CommonExclusionNamespaces))
-                ServerRegisterType(type);
+                RegisterLocalRpc(type);
+            s_initialized = true;
         }
 
-        public static int ServerGetTypeCount() => s_serverIdToTypeMap.Count;
+        public static void ServerRegisterNetworkRpcs() {
+            foreach (var (hash, type) in s_localHashToTypeMap)
+                RegisterNetworkRpc(hash, s_networkNextId++);
+        }
+
+        public static int GetNetworkRpcCount() => s_networkTypeToIdMap.Count;
+
+        public static IEnumerable<(ulong, ushort)> GetNetworkRpcsEnumerable() {
+            foreach (var (type, id) in s_networkTypeToIdMap)
+                yield return (s_localTypeToHashMap[type], id);
+        }
+
+        public static void ClearNetworkRpcs() {
+            s_localTypeToHashMap.Clear();
+            s_localHashToTypeMap.Clear();
+            s_networkNextId = 1;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Type GetTypeFromNetworkId(ushort id) => s_networkIdToTypeMap[id];
         
-        public static IEnumerable<KeyValuePair<ushort, Type>> ServerGetMapEnumerable() => s_serverIdToTypeMap;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ushort GetNetworkIdFromType(Type type) => s_networkTypeToIdMap[type];
 
-        public static void ServerRegisterType(Type type) {
-            var id = s_serverNextId++;
-            s_serverTypeToIdMap[type] = id;
-            s_serverIdToTypeMap[id] = type;
-            Debug.Log($"Server registering type {type.Name} with id {id}");
+        public static void RegisterNetworkRpc(ulong hash, ushort id) {
+            var type = s_localHashToTypeMap[hash];
+            s_networkTypeToIdMap[type] = id;
+            s_networkIdToTypeMap[id] = type;
         }
         
-        public static void ClientRegisterType(Type type, ushort id) {
-            s_clientTypeToIdMap[type] = id;
-            s_clientIdToTypeMap[id] = type;
-            Debug.Log($"Client registering type {type.Name} with id {id}");
-        }
-        
-        public static ushort ServerGetId(Type type) {
-            if (!s_serverTypeToIdMap.ContainsKey(type))
-                throw new Exception($"Invalid RPC type: {type.Name}");
-            return s_serverTypeToIdMap[type];
-        }
-
-        public static Type ServerGetType(ushort id) {
-            if (!s_serverIdToTypeMap.ContainsKey(id))
-                throw new Exception($"Invalid RPC id: {id}");
-            return s_serverIdToTypeMap[id];
-        }
-        
-        public static ushort ClientGetId(Type type) {
-            if (!s_clientTypeToIdMap.ContainsKey(type))
-                throw new Exception($"Invalid RPC type: {type}");
-            return s_clientTypeToIdMap[type];
-        }
-
-        public static Type ClientGetType(ushort id) {
-            if (!s_clientIdToTypeMap.ContainsKey(id))
-                throw new Exception($"Invalid RPC id: {id}");
-            return s_clientIdToTypeMap[id];
-        }
-
-        public static ushort GetIdAuto(Type type) => NetSyncAPI.ServerAPI.StartingOrStarted ? ServerGetId(type) : ClientGetId(type);
-        
-        public static Type GetTypeAuto(ushort id) => NetSyncAPI.ServerAPI.StartingOrStarted ? ServerGetType(id) : ClientGetType(id);
-
-        public static void ClearClientMaps() {
-            s_clientTypeToIdMap.Clear();
-            s_clientIdToTypeMap.Clear();
+        private static void RegisterLocalRpc(Type type) {
+            var hash = SerializationAPI.CalculateHash(type.Name);
+            s_localTypeToHashMap[type] = hash;
+            s_localHashToTypeMap[hash] = type;
         }
 
         private static void ClearStaticCache() {
-            s_serverNextId = 1;
-            s_serverTypeToIdMap.Clear();
-            s_serverIdToTypeMap.Clear();
-            ClearClientMaps();
+            s_localTypeToHashMap.Clear();
+            s_localHashToTypeMap.Clear();
+            s_networkTypeToIdMap.Clear();
+            s_networkIdToTypeMap.Clear();
+            s_networkNextId = 1;
         }
     }
 }

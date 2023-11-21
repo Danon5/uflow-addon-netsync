@@ -1,4 +1,5 @@
-﻿using Cysharp.Threading.Tasks;
+﻿using System;
+using Cysharp.Threading.Tasks;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     public static class NetSyncAPI {
@@ -22,14 +23,38 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 return NetSyncModule.InternalSingleton.Transport.StopServerAsync();
             }
 
-            public static void Send<T>(in NetworkClient client, in T rpc) where T : INetRpc {
+            public static void Send<T>(in T rpc, in NetworkClient client) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
-                NetSyncModule.InternalSingleton.Transport.ServerSend(client, rpc);
+                NetSyncModule.InternalSingleton.Transport.ServerSend(rpc, client);
+            }
+            
+            public static void Send<T>(in T rpc, ushort clientId) where T : INetRpc {
+                NetSyncModule.ThrowIfNotLoaded();
+                if (!NetSyncModule.InternalSingleton.Transport.TryGetClient(clientId, out var client))
+                    throw new Exception($"No client with id {clientId}.");
+                NetSyncModule.InternalSingleton.Transport.ServerSend(rpc, client);
             }
             
             public static void SendToAll<T>(in T rpc) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.ServerSendToAll(rpc);
+            }
+            
+            public static void SendToAllExcept<T>(in T rpc, in NetworkClient client) where T : INetRpc {
+                NetSyncModule.ThrowIfNotLoaded();
+                NetSyncModule.InternalSingleton.Transport.ServerSendToAllExcept(rpc, client);
+            }
+            
+            public static void SendToAllExcept<T>(in T rpc, ushort clientId) where T : INetRpc {
+                NetSyncModule.ThrowIfNotLoaded();
+                if (!NetSyncModule.InternalSingleton.Transport.TryGetClient(clientId, out var client))
+                    throw new Exception($"No client with id {clientId}.");
+                NetSyncModule.InternalSingleton.Transport.ServerSendToAllExcept(rpc, client);
+            }
+            
+            public static void SendToAllExceptHost<T>(in T rpc) where T : INetRpc {
+                NetSyncModule.ThrowIfNotLoaded();
+                NetSyncModule.InternalSingleton.Transport.ServerSendToAllExceptHost(rpc);
             }
         }
 
