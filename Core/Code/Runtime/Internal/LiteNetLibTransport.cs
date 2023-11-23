@@ -5,13 +5,15 @@ using Cysharp.Threading.Tasks;
 using LiteNetLib;
 using LiteNetLib.Utils;
 using UFlow.Addon.Serialization.Core.Runtime;
+using UFlow.Core.Runtime;
 using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     internal sealed class LiteNetLibTransport {
-        public event Action<ConnectionState> ServerStateChangedEvent;
-        public event Action<ConnectionState> ClientStateChangedEvent;
-        public event Action<ConnectionState> HostStateChangedEvent;
+        public static event Action<ConnectionState> ServerStateChangedEvent;
+        public static event Action<ConnectionState> ClientStateChangedEvent;
+        public static event Action<ConnectionState> HostStateChangedEvent;
+        public static event Action<NetworkClient> ServerClientAuthorizedEvent;
         private const string c_default_ip = "localhost";
         private const ushort c_default_port = 7777;
         private static readonly TimeSpan s_timeout = TimeSpan.FromSeconds(5);
@@ -58,6 +60,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public bool HostStartingOrStarted => HostState is ConnectionState.Starting or ConnectionState.Started;
         public bool HostStoppingOrStopped => HostState is ConnectionState.Stopping or ConnectionState.Stopped;
         public NetPeer ServerPeer { get; private set; }
+
+        static LiteNetLibTransport() => UnityGlobalEventHelper.RuntimeInitializeOnLoad += ClearStaticCache;
 
         public LiteNetLibTransport() {
             var serverListener = new EventBasedNetListener();
@@ -262,7 +266,16 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #if UFLOW_DEBUG_ENABLED
             Debug.Log($"Authorized peer {peer.Id}.");
 #endif
-            m_clients.Add((ushort)peer.Id, new NetworkClient((ushort)peer.Id));
+            var client = new NetworkClient((ushort)peer.Id);
+            m_clients.Add((ushort)peer.Id, client);
+            ServerClientAuthorizedEvent?.Invoke(client);
+        }
+
+        private static void ClearStaticCache() {
+            ServerStateChangedEvent = default;
+            ClientStateChangedEvent = default;
+            HostStateChangedEvent = default;
+            ServerClientAuthorizedEvent = default;
         }
         
         private static void ServerOnConnectionRequest(ConnectionRequest request) => request.Accept();

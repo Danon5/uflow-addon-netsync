@@ -1,12 +1,21 @@
 ﻿using System;
 using Cysharp.Threading.Tasks;
+using UFlow.Core.Runtime;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     public static class NetSyncAPI {
         public static class ServerAPI {
+            public static event Action<ConnectionState> StateChangedEvent;
+            public static event Action<NetworkClient> ClientAuthorizedEvent;
             public static ConnectionState State => NetSyncModule.InternalSingleton.Transport.ServerState;
             public static bool StartingOrStarted => NetSyncModule.InternalSingleton.Transport.ServerStartingOrStarted;
             public static bool StoppingOrStopped => NetSyncModule.InternalSingleton.Transport.ServerStoppingOrStopped;
+
+            static ServerAPI() {
+                UnityGlobalEventHelper.RuntimeInitializeOnLoad += ClearStaticCache;
+                LiteNetLibTransport.ServerStateChangedEvent += state => StateChangedEvent?.Invoke(state);
+                LiteNetLibTransport.ServerClientAuthorizedEvent += client => ClientAuthorizedEvent?.Invoke(client);
+            }
             
             public static UniTask StartServerAsync() {
                 NetSyncModule.ThrowIfNotLoaded();
@@ -62,9 +71,15 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
             public static void UnregisterHandler<T>(in ServerRpcHandlerDelegate<T> handler) where T : INetRpc => 
                 NetDeserializer.RpcDeserializer<T>.ServerRpcDeserializedEvent -= handler;
+            
+            private static void ClearStaticCache() {
+                StateChangedEvent = default;
+                ClientAuthorizedEvent = default;
+            }
         }
 
         public static class ClientAPI {
+            public static event Action<ConnectionState> StateChangedEvent;
             public static ConnectionState State => NetSyncModule.InternalSingleton.Transport.ClientState;
             public static bool StartingOrStarted => NetSyncModule.InternalSingleton.Transport.ClientStartingOrStarted;
             public static bool StoppingOrStopped => NetSyncModule.InternalSingleton.Transport.ClientStoppingOrStopped;
@@ -97,6 +112,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         public static class HostAPI {
+            public static event Action<ConnectionState> StateChangedEvent;
             public static ConnectionState State => NetSyncModule.InternalSingleton.Transport.HostState;
             public static bool StartingOrStarted => NetSyncModule.InternalSingleton.Transport.HostStartingOrStarted;
             public static bool StoppingOrStopped => NetSyncModule.InternalSingleton.Transport.HostStoppingOrStopped;
