@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using UFlow.Addon.ECS.Core.Runtime;
 using UFlow.Core.Runtime;
 
 // ReSharper disable SuspiciousTypeConversion.Global
@@ -17,11 +18,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             UFlowUtils.Collections.EnsureIndex(ref s_processors, worldId);
             s_processors[worldId] ??= new Dictionary<Type, List<INetRpcProcessor>>();
             var processorTypeMap = s_processors[worldId];
-            var processorType = processor.GetType();
-            if (!processorTypeMap.TryGetValue(processorType, out var processors)) {
+            var rpcType = processor.GetRpcType();
+            if (!processorTypeMap.TryGetValue(rpcType, out var processors)) {
                 processors = new List<INetRpcProcessor>();
-                s_processors[worldId].Add(processorType, processors);
+                s_processors[worldId].Add(rpcType, processors);
             }
+            processor.EnsureBufferAllocated(Worlds.Get(worldId));
             processors.Add(processor);
         }
 
@@ -29,9 +31,11 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (s_processors == null) return;
             if (worldId >= s_processors.Length) return;
             if (s_processors[worldId] == null) return;
-            foreach (var (type, processors) in s_processors[worldId]) {
+            var world = Worlds.Get(worldId);
+;            foreach (var (type, processors) in s_processors[worldId]) {
                 if (processors == null) continue;
                 foreach (var processor in processors) {
+                    processor.EnsureBufferDisposed(world);
                     if (processor is IDisposable disposable)
                         disposable.Dispose();
                 }
@@ -43,10 +47,22 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (s_processors == null) return;
             if (worldId >= s_processors.Length) return;
             if (s_processors[worldId] == null) return;
+            var world = Worlds.Get(worldId);
             foreach (var (type, processors) in s_processors[worldId]) {
                 if (processors == null) continue;
                 foreach (var processor in processors)
-                    processor.ProcessAll();
+                    processor.ProcessAll(world);
+            }
+        }
+
+        public static void ClearProcessors(short worldId) {
+            if (s_processors == null) return;
+            if (worldId >= s_processors.Length) return;
+            if (s_processors[worldId] == null) return;
+            var world = Worlds.Get(worldId);
+            foreach (var (type, processors) in s_processors[worldId]) {
+                if (processors.Count == 0) continue;
+                processors[0].ClearAll(world);
             }
         }
 
