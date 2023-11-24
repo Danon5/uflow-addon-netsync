@@ -18,8 +18,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         
         public override UniTask LoadDirectAsync() {
             InternalSingleton = this;
-            EcsModule<NetworkWorld>.Load();
-            World = EcsModule<NetworkWorld>.Get().World;
+            EcsModule<NetWorld>.Load();
+            World = EcsModule<NetWorld>.Get().World;
             return base.LoadDirectAsync();
         }
 
@@ -31,7 +31,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             else if (Transport.ClientStartingOrStarted)
                 await Transport.StopClientAsync();
             Transport.ForceStop();
-            EcsModule<NetworkWorld>.Unload();
+            EcsModule<NetWorld>.Unload();
             World = null;
             InternalSingleton = null;
         }

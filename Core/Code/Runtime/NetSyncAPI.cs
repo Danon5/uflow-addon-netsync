@@ -6,7 +6,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
     public static class NetSyncAPI {
         public static class ServerAPI {
             public static event Action<ConnectionState> StateChangedEvent;
-            public static event Action<NetworkClient> ClientAuthorizedEvent;
+            public static event Action<NetClient> ClientAuthorizedEvent;
             public static ConnectionState State => NetSyncModule.InternalSingleton.Transport.ServerState;
             public static bool StartingOrStarted => NetSyncModule.InternalSingleton.Transport.ServerStartingOrStarted;
             public static bool StoppingOrStopped => NetSyncModule.InternalSingleton.Transport.ServerStoppingOrStopped;
@@ -32,7 +32,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 return NetSyncModule.InternalSingleton.Transport.StopServerAsync();
             }
 
-            public static void Send<T>(in T rpc, in NetworkClient client) where T : INetRpc {
+            public static void Send<T>(in T rpc, in NetClient client) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.ServerSend(rpc, client);
             }
@@ -49,7 +49,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 NetSyncModule.InternalSingleton.Transport.ServerSendToAll(rpc);
             }
             
-            public static void SendToAllExcept<T>(in T rpc, in NetworkClient excludedClient) where T : INetRpc {
+            public static void SendToAllExcept<T>(in T rpc, in NetClient excludedClient) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.ServerSendToAllExcept(rpc, excludedClient);
             }

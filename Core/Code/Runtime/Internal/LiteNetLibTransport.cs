@@ -13,13 +13,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public static event Action<ConnectionState> ServerStateChangedEvent;
         public static event Action<ConnectionState> ClientStateChangedEvent;
         public static event Action<ConnectionState> HostStateChangedEvent;
-        public static event Action<NetworkClient> ServerClientAuthorizedEvent;
+        public static event Action<NetClient> ServerClientAuthorizedEvent;
         private const string c_default_ip = "localhost";
         private const ushort c_default_port = 7777;
         private static readonly TimeSpan s_timeout = TimeSpan.FromSeconds(5);
         private static readonly int s_timeoutMS = (int)s_timeout.TotalMilliseconds;
         private readonly Dictionary<ushort, NetPeer> m_peers = new();
-        private readonly Dictionary<ushort, NetworkClient> m_clients = new();
+        private readonly Dictionary<ushort, NetClient> m_clients = new();
         private readonly NetManager m_server;
         private readonly NetManager m_client;
         private readonly ByteBuffer m_buffer;
@@ -187,45 +187,45 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public NetworkClient GetClient(ushort id) => m_clients[id];
+        public NetClient GetClient(ushort id) => m_clients[id];
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public NetworkClient GetClient(NetPeer peer) => m_clients[(ushort)peer.Id];
+        public NetClient GetClient(NetPeer peer) => m_clients[(ushort)peer.Id];
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryGetClient(ushort id, out NetworkClient client) => m_clients.TryGetValue(id, out client);
+        public bool TryGetClient(ushort id, out NetClient client) => m_clients.TryGetValue(id, out client);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool ServerIsHostClient(in NetworkClient client) => HostStartingOrStarted && client.id == 0;
+        public bool ServerIsHostClient(in NetClient client) => HostStartingOrStarted && client.id == 0;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool ServerIsHostClient(ushort clientId) => HostStartingOrStarted && clientId == 0;
 
         public void ServerSend<T>(in T rpc,
-                                  in NetworkClient client,
-                                  NetworkReliabilityType networkReliabilityType = NetworkReliabilityType.ReliableOrdered) 
+                                  in NetClient client,
+                                  NetReliability netReliability = NetReliability.ReliableOrdered) 
             where T : INetRpc {
             if (m_clients.Count == 0) return;
             BeginWrite(NetPacketType.RPC);
             NetSerializer.SerializeRpc(m_buffer, rpc);
             EndWrite();
-            m_peers[client.id].Send(m_writer, (DeliveryMethod)networkReliabilityType);
+            m_peers[client.id].Send(m_writer, (DeliveryMethod)netReliability);
         }
 
         public void ServerSendToAll<T>(in T rpc, 
-                                       NetworkReliabilityType networkReliabilityType = NetworkReliabilityType.ReliableOrdered)
+                                       NetReliability netReliability = NetReliability.ReliableOrdered)
             where T : INetRpc {
             if (m_clients.Count == 0) return;
             BeginWrite(NetPacketType.RPC);
             NetSerializer.SerializeRpc(m_buffer, rpc);
             EndWrite();
             foreach (var (id, client) in m_clients)
-                m_peers[id].Send(m_writer, (DeliveryMethod)networkReliabilityType);
+                m_peers[id].Send(m_writer, (DeliveryMethod)netReliability);
         }
         
         public void ServerSendToAllExcept<T>(in T rpc, 
-                                             in NetworkClient excludedClient,
-                                             NetworkReliabilityType networkReliabilityType = NetworkReliabilityType.ReliableOrdered)
+                                             in NetClient excludedClient,
+                                             NetReliability netReliability = NetReliability.ReliableOrdered)
             where T : INetRpc {
             if (m_clients.Count == 0) return;
             BeginWrite(NetPacketType.RPC);
@@ -233,26 +233,26 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             EndWrite();
             foreach (var (id, client) in m_clients) {
                 if (id == excludedClient.id) continue;
-                m_peers[id].Send(m_writer, (DeliveryMethod)networkReliabilityType);
+                m_peers[id].Send(m_writer, (DeliveryMethod)netReliability);
             }
         }
 
         public void ServerSendToAllExceptHost<T>(in T rpc,
-                                                 NetworkReliabilityType networkReliabilityType = NetworkReliabilityType.ReliableOrdered)
+                                                 NetReliability netReliability = NetReliability.ReliableOrdered)
             where T : INetRpc {
             if (!HostStartingOrStarted) return;
-            ServerSendToAllExcept(rpc, m_clients[0], networkReliabilityType);
+            ServerSendToAllExcept(rpc, m_clients[0], netReliability);
         }
         
         public void ClientSend<T>(in T rpc,
-                                  NetworkReliabilityType networkReliabilityType = NetworkReliabilityType.ReliableOrdered) 
+                                  NetReliability netReliability = NetReliability.ReliableOrdered) 
             where T : INetRpc {
             if (ServerPeer.ConnectionState != LiteNetLib.ConnectionState.Connected)
                 throw new Exception("Cannot send rpc when not connected.");
             BeginWrite(NetPacketType.RPC);
             NetSerializer.SerializeRpc(m_buffer, rpc);
             EndWrite();
-            ServerPeer.Send(m_writer, (DeliveryMethod)networkReliabilityType);
+            ServerPeer.Send(m_writer, (DeliveryMethod)netReliability);
         }
 
         public void ClientPeerHandshakeResponse() {
@@ -266,7 +266,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #if UFLOW_DEBUG_ENABLED
             Debug.Log($"Authorized peer {peer.Id}.");
 #endif
-            var client = new NetworkClient((ushort)peer.Id);
+            var client = new NetClient((ushort)peer.Id);
             m_clients.Add((ushort)peer.Id, client);
             ServerClientAuthorizedEvent?.Invoke(client);
         }

@@ -35,14 +35,14 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             UnsubscribeFromEventsIfInitialized();
         }
 
-        private static void AppendToBuffers(in T rpc, NetworkClient client = null) {
+        private static void AppendToBuffers(in T rpc, NetClient client = null) {
             foreach (var buffer in s_buffers)
                 buffer?.Add(new BufferElement(rpc, client));
         }
         
         private static void ClientOnRpcDeserialized(in T rpc) => AppendToBuffers(rpc);
 
-        private static void ServerOnRpcDeserialized(in T rpc, in NetworkClient client) => AppendToBuffers(rpc, client);
+        private static void ServerOnRpcDeserialized(in T rpc, in NetClient client) => AppendToBuffers(rpc, client);
 
         private static void SubscribeToEventsIfUninitialized() {
             if (s_initialized) return;
@@ -65,9 +65,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         public readonly struct BufferElement {
             public readonly T rpc;
-            public readonly NetworkClient client;
+            public readonly NetClient client;
 
-            public BufferElement(in T rpc, NetworkClient client) {
+            public BufferElement(in T rpc, NetClient client) {
                 this.rpc = rpc;
                 this.client = client;
             }

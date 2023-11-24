@@ -7,6 +7,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 Process(bufferElement.rpc, bufferElement.client);
         }
 
-        protected abstract void Process(in T rpc, NetworkClient client);
+        protected abstract void Process(in T rpc, NetClient client);
     }
 }

@@ -1,5 +1,5 @@
 ﻿namespace UFlow.Addon.NetSync.Core.Runtime {
-    public enum NetworkReliabilityType : byte {
+    public enum NetReliability : byte {
         /// <summary>
         /// Reliable and ordered. Packets won't be dropped, won't be duplicated, will arrive in order.
         /// </summary>
