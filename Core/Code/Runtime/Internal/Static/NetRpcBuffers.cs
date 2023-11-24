@@ -12,8 +12,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         static NetRpcBuffers() => UnityGlobalEventHelper.RuntimeInitializeOnLoad += ClearStaticCache;
 
         public static void AllocateBuffer(short worldId) {
-            if (!s_initialized)
-                Initialize();
+            SubscribeToEventsIfUninitialized();
             UFlowUtils.Collections.EnsureIndex(ref s_buffers, worldId);
             s_buffers[worldId] = new List<BufferElement>();
         }
@@ -27,7 +26,14 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         public static void ClearBuffer(short worldId) => s_buffers[worldId].Clear();
 
-        public static void DisposeBuffer(short worldId) => s_buffers[worldId] = null;
+        public static void DisposeBuffer(short worldId) {
+            s_buffers[worldId] = null;
+            foreach (var buffer in s_buffers) {
+                if (buffer != null) 
+                    return;
+            }
+            UnsubscribeFromEventsIfInitialized();
+        }
 
         private static void AppendToBuffers(in T rpc, NetworkClient client = null) {
             foreach (var buffer in s_buffers)
@@ -38,17 +44,23 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         private static void ServerOnRpcDeserialized(in T rpc, in NetworkClient client) => AppendToBuffers(rpc, client);
 
-        private static void Initialize() {
+        private static void SubscribeToEventsIfUninitialized() {
+            if (s_initialized) return;
             NetDeserializer.RpcDeserializer<T>.ClientRpcDeserializedEvent += ClientOnRpcDeserialized;
             NetDeserializer.RpcDeserializer<T>.ServerRpcDeserializedEvent += ServerOnRpcDeserialized;
             s_initialized = true;
         }
+
+        private static void UnsubscribeFromEventsIfInitialized() {
+            if (!s_initialized) return;
+            NetDeserializer.RpcDeserializer<T>.ClientRpcDeserializedEvent -= ClientOnRpcDeserialized;
+            NetDeserializer.RpcDeserializer<T>.ServerRpcDeserializedEvent -= ServerOnRpcDeserialized;
+            s_initialized = false;
+        }
         
         private static void ClearStaticCache() {
             s_buffers = Array.Empty<List<BufferElement>>();
-            s_initialized = false;
-            NetDeserializer.RpcDeserializer<T>.ClientRpcDeserializedEvent -= ClientOnRpcDeserialized;
-            NetDeserializer.RpcDeserializer<T>.ServerRpcDeserializedEvent -= ServerOnRpcDeserialized;
+            UnsubscribeFromEventsIfInitialized();
         }
 
         public readonly struct BufferElement {
