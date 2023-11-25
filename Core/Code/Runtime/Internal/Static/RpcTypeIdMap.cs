@@ -6,11 +6,10 @@ using UFlow.Core.Runtime;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     internal static class RpcTypeIdMap {
-        private static readonly Dictionary<Type, ulong> s_localTypeToHashMap = new();
         private static readonly Dictionary<ulong, Type> s_localHashToTypeMap = new();
-        private static readonly Dictionary<Type, ushort> s_networkTypeToIdMap = new();
+        private static readonly Dictionary<Type, ulong> s_localTypeToHashMap = new();
         private static readonly Dictionary<ushort, Type> s_networkIdToTypeMap = new();
-        private static ushort s_networkNextId = 1;
+        private static readonly Dictionary<Type, ushort> s_networkTypeToIdMap = new();
         private static bool s_initialized;
 
         static RpcTypeIdMap() => UnityGlobalEventHelper.RuntimeInitializeOnLoad += ClearStaticCache;
@@ -23,21 +22,21 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         public static void ServerRegisterNetworkRpcs() {
+            ushort nextId = 1;
             foreach (var (hash, type) in s_localHashToTypeMap)
-                RegisterNetworkRpc(hash, s_networkNextId++);
+                RegisterNetworkRpc(hash, nextId++);
         }
 
         public static int GetNetworkRpcCount() => s_networkTypeToIdMap.Count;
 
-        public static IEnumerable<(ulong, ushort)> GetNetworkRpcsEnumerable() {
+        public static IEnumerable<(ulong, ushort)> GetNetworkRpcsHashToIdEnumerable() {
             foreach (var (type, id) in s_networkTypeToIdMap)
                 yield return (s_localTypeToHashMap[type], id);
         }
 
         public static void ClearNetworkRpcs() {
-            s_networkTypeToIdMap.Clear();
             s_networkIdToTypeMap.Clear();
-            s_networkNextId = 1;
+            s_networkTypeToIdMap.Clear();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -48,22 +47,21 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         public static void RegisterNetworkRpc(ulong hash, ushort id) {
             var type = s_localHashToTypeMap[hash];
-            s_networkTypeToIdMap[type] = id;
             s_networkIdToTypeMap[id] = type;
+            s_networkTypeToIdMap[type] = id;
         }
         
         private static void RegisterLocalRpc(Type type) {
             var hash = SerializationAPI.CalculateHash(type.Name);
-            s_localTypeToHashMap[type] = hash;
             s_localHashToTypeMap[hash] = type;
+            s_localTypeToHashMap[type] = hash;
         }
 
         private static void ClearStaticCache() {
-            s_localTypeToHashMap.Clear();
             s_localHashToTypeMap.Clear();
-            s_networkTypeToIdMap.Clear();
+            s_localTypeToHashMap.Clear();
             s_networkIdToTypeMap.Clear();
-            s_networkNextId = 1;
+            s_networkTypeToIdMap.Clear();
             s_initialized = false;
         }
     }

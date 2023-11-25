@@ -32,11 +32,20 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #if UFLOW_DEBUG_ENABLED
             Debug.Log("Deserializing handshake.");
 #endif
-            var count = buffer.ReadUShort();
-            for (var i = 0; i < count; i++) {
+            var rpcCount = buffer.ReadUShort();
+            for (var i = 0; i < rpcCount; i++) {
                 var hash = buffer.ReadULong();
                 var id = buffer.ReadUShort();
                 RpcTypeIdMap.RegisterNetworkRpc(hash, id);
+            }
+            var prefabCount = buffer.ReadUShort();
+            if (prefabCount == 0) return;
+            var prefabCache = NetSyncPrefabCache.Get();
+            for (var i = 0; i < prefabCount; i++) {
+                var hash = buffer.ReadULong();
+                var id = buffer.ReadUShort();
+                if (prefabCache == null) continue;
+                prefabCache.RegisterNetworkPrefab(hash, id);
             }
         }
         

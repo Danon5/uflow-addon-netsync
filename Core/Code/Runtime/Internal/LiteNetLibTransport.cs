@@ -284,6 +284,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             var result = m_server.Start(port);
             await UniTask.WaitUntil(() => m_server.IsRunning).Timeout(s_timeout);
             RpcTypeIdMap.ServerRegisterNetworkRpcs();
+            var prefabCache = NetSyncPrefabCache.Get();
+            if (prefabCache == null) return result;
+            prefabCache.ServerRegisterNetworkIds();
             return result;
         }
 
@@ -296,6 +299,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #endif
             m_peers.Clear();
             RpcTypeIdMap.ClearNetworkRpcs();
+            var prefabCache = NetSyncPrefabCache.Get();
+            if (prefabCache == null) return;
+            prefabCache.ClearNetworkIdMaps();
         }
 
         private async UniTask<bool> ClientSetupAsync(string ip, ushort port) {
@@ -317,6 +323,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 Debug.Log("Client stopped.");
 #endif
             RpcTypeIdMap.ClearNetworkRpcs();
+            var prefabCache = NetSyncPrefabCache.Get();
+            if (prefabCache == null) return;
+            prefabCache.ClearNetworkIdMaps();
         }
 
         private void ServerOnPeerConnected(NetPeer peer) {
