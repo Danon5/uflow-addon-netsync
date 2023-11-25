@@ -6,8 +6,7 @@ using UnityEngine;
 namespace UFlow.Addon.NetSync.Core.Runtime {
     public sealed class NetSyncModule : BaseAsyncBehaviourModule<NetSyncModule> {
         private float m_tickRolloverDelta; 
-            
-        public NetSyncModule() => Transport = new LiteNetLibTransport();
+        
         public int TickRate { get; set; } = 60;
         public float TickDelta => 1f / TickRate;
         public int MaxRolloverTicks { get; set; } = 3;
@@ -15,6 +14,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         internal static NetSyncModule InternalSingleton { get; private set; }
         internal World World { get; private set; }
         internal LiteNetLibTransport Transport { get; }
+        
+        public NetSyncModule() => Transport = new LiteNetLibTransport();
         
         public override UniTask LoadDirectAsync() {
             InternalSingleton = this;
