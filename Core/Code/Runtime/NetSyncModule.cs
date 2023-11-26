@@ -84,7 +84,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         private void OnEntityCreated(in Entity entity) {
-            
+            if (NetSyncAPI.IsServer) 
+                Debug.Log($"{entity} created on server.");
+            if (NetSyncAPI.IsClient)
+                Debug.Log($"{entity} created on client.");
         }
         
         private void OnEntityDestroying(in Entity entity) {
