@@ -71,6 +71,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
             public static void UnregisterHandler<T>(in ServerRpcHandlerDelegate<T> handler) where T : INetRpc => 
                 NetDeserializer.RpcDeserializer<T>.ServerRpcDeserializedEvent -= handler;
+
+            public static NetSynchronize GetNextValidNetSynchronizeComponent() => new() {
+                id = NetSyncModule.InternalSingleton.NextNetworkId++
+            };
             
             private static void ClearStaticCache() {
                 StateChangedEvent = default;

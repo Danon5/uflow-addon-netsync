@@ -13,7 +13,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 buffer.Write((ushort)0);
                 return;
             }
-            buffer.Write((ushort)prefabCache.LocalPrefabCount);
+            buffer.Write((ushort)prefabCache.NetworkPrefabCount);
             foreach (var (hash, id) in prefabCache.GetNetworkPrefabHashToIdEnumerable()) {
                 buffer.Write(hash);
                 buffer.Write(id);

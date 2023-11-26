@@ -44,7 +44,18 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             for (var i = 0; i < prefabCount; i++) {
                 var hash = buffer.ReadULong();
                 var id = buffer.ReadUShort();
-                if (prefabCache == null) continue;
+                if (prefabCache == null) {
+#if UFLOW_DEBUG_ENABLED
+                    Debug.LogWarning($"Client failing to deserialize prefab with hash {hash} because cache is null.");
+#endif
+                    continue;
+                }
+                if (!prefabCache.HasLocalHash(hash)) {
+#if UFLOW_DEBUG_ENABLED
+                    Debug.LogWarning($"Client failing to deserialize prefab with hash {hash} because it has no matching local hash.");
+#endif
+                    continue;
+                }
                 prefabCache.RegisterNetworkPrefab(hash, id);
             }
         }

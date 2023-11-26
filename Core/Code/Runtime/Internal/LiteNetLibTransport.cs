@@ -24,7 +24,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         private readonly NetManager m_client;
         private readonly ByteBuffer m_buffer;
         private readonly NetDataWriter m_writer;
-        private readonly NetDataReader m_reader;
         private ConnectionState m_serverState;
         private ConnectionState m_clientState;
         private ConnectionState m_hostState;
@@ -83,7 +82,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             };
             m_buffer = new ByteBuffer(true);
             m_writer = new NetDataWriter(true);
-            m_reader = new NetDataReader(m_writer);
             RpcTypeIdMap.RegisterAllLocalRpcsIfRequired();
         }
 
@@ -209,7 +207,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             BeginWrite(NetPacketType.RPC);
             NetSerializer.SerializeRpc(m_buffer, rpc);
             EndWrite();
-            m_peers[client.id].Send(m_writer, (DeliveryMethod)netReliability);
+            SendBufferPayloadToClient(client, netReliability);
         }
 
         public void ServerSendToAll<T>(in T rpc, 
@@ -219,8 +217,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             BeginWrite(NetPacketType.RPC);
             NetSerializer.SerializeRpc(m_buffer, rpc);
             EndWrite();
-            foreach (var (id, client) in m_clients)
-                m_peers[id].Send(m_writer, (DeliveryMethod)netReliability);
+            SendBufferPayloadToAllClients(netReliability);
         }
         
         public void ServerSendToAllExcept<T>(in T rpc, 
@@ -231,10 +228,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             BeginWrite(NetPacketType.RPC);
             NetSerializer.SerializeRpc(m_buffer, rpc);
             EndWrite();
-            foreach (var (id, client) in m_clients) {
-                if (id == excludedClient.id) continue;
-                m_peers[id].Send(m_writer, (DeliveryMethod)netReliability);
-            }
+            SendBufferPayloadToAllClientsExcept(excludedClient, netReliability);
         }
 
         public void ServerSendToAllExceptHost<T>(in T rpc,
@@ -252,14 +246,14 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             BeginWrite(NetPacketType.RPC);
             NetSerializer.SerializeRpc(m_buffer, rpc);
             EndWrite();
-            ServerPeer.Send(m_writer, (DeliveryMethod)netReliability);
+            SendBufferPayloadToServer(netReliability);
         }
 
         public void ClientPeerHandshakeResponse() {
             BeginWrite(NetPacketType.HandshakeResponse);
             NetSerializer.SerializeHandshakeResponse(m_buffer);
             EndWrite();
-            ServerPeer.Send(m_writer, DeliveryMethod.ReliableOrdered);
+            SendBufferPayloadToServer();
         }
 
         public void ServerAuthorizePeer(NetPeer peer) {
@@ -269,6 +263,40 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             var client = new NetClient((ushort)peer.Id);
             m_clients.Add((ushort)peer.Id, client);
             ServerClientAuthorizedEvent?.Invoke(client);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void BeginWrite(NetPacketType type) {
+            m_writer.Reset();
+            m_buffer.Reset();
+            m_buffer.Write((byte)type);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void EndWrite() => m_writer.Put(m_buffer.GetBytesToCursor());
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void SendBufferPayloadToServer(NetReliability netReliability = NetReliability.ReliableOrdered) =>
+            ServerPeer.Send(m_writer, (DeliveryMethod)netReliability);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void SendBufferPayloadToClient(NetClient client, 
+                                                NetReliability netReliability = NetReliability.ReliableOrdered) =>
+            m_peers[client.id].Send(m_writer, (DeliveryMethod)netReliability);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void SendBufferPayloadToAllClients(NetReliability netReliability = NetReliability.ReliableOrdered) {
+            foreach (var client in m_clients)
+                m_peers[client.Key].Send(m_writer, (DeliveryMethod)netReliability);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void SendBufferPayloadToAllClientsExcept(NetClient excludedClient, 
+                                                          NetReliability netReliability = NetReliability.ReliableOrdered) {
+            foreach (var client in m_clients) {
+                if (client.Key == excludedClient.id) continue;
+                m_peers[client.Key].Send(m_writer, (DeliveryMethod)netReliability);
+            }
         }
 
         private static void ClearStaticCache() {
@@ -374,16 +402,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             BeginRead(reader, out var packetType);
             NetDeserializer.Deserialize(m_buffer, packetType, peer);
             EndRead(reader);
-        }
-
-        private void BeginWrite(NetPacketType type) {
-            m_writer.Reset();
-            m_buffer.Reset();
-            m_buffer.Write((byte)type);
-        }
-
-        private void EndWrite() {
-            m_writer.Put(m_buffer.GetBytesToCursor());
         }
 
         private void BeginRead(NetDataReader reader, out NetPacketType packetType) {

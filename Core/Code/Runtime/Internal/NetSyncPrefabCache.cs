@@ -17,7 +17,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         [SerializeField, ListDrawerSettings(IsReadOnly = true)] 
         private List<GameObject> m_prefabs;
 
-        public int LocalPrefabCount => m_localHashToPrefabMap.Count;
+        public int NetworkPrefabCount => m_networkIdToPrefabMap.Count;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void InitializeOnLoad() {
@@ -37,13 +37,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #endif
         }
         
-        public void RefreshLocalHashMaps() {
-            m_localHashToPrefabMap.Clear();
-            m_localPrefabToHashMap.Clear();
-            foreach (var prefab in m_prefabs)
-                RegisterLocalPrefab(prefab);
-        }
-
         public IEnumerable<(ulong, ushort)> GetNetworkPrefabHashToIdEnumerable() {
             foreach (var (id, prefab) in m_networkIdToPrefabMap)
                 yield return (m_localPrefabToHashMap[prefab], id);
@@ -56,10 +49,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         public void ServerRegisterNetworkIds() {
             ushort nextId = 1;
-            foreach (var (hash, prefab) in m_localHashToPrefabMap)
+            foreach (var (hash, _) in m_localHashToPrefabMap)
                 RegisterNetworkPrefab(hash, nextId++);
         }
 
+        public bool HasLocalHash(ulong hash) => m_localHashToPrefabMap.ContainsKey(hash);
+        
         public void RegisterNetworkPrefab(ulong hash, ushort id) {
             var prefab = m_localHashToPrefabMap[hash];
             m_networkIdToPrefabMap[id] = prefab;
@@ -79,7 +74,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 foreach (var guid in guids) {
                     var path = AssetDatabase.GUIDToAssetPath(guid);
                     var asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-                    if (!asset.TryGetComponent(out NetSceneEntity netSceneEntity)) continue;
+                    if (!asset.TryGetComponent(out NetSceneEntity _)) continue;
                     netPrefabs ??= new List<GameObject>();
                     netPrefabs.Add(asset);
                 }
@@ -95,12 +90,19 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 cache.m_prefabs.AddRange(netPrefabs);
                 cache.RefreshLocalHashMaps();
             }
-            catch (Exception e){
+            catch (Exception e) {
                 Debug.LogWarning(e);
             }
         }
 #endif
 
+        private void RefreshLocalHashMaps() {
+            m_localHashToPrefabMap.Clear();
+            m_localPrefabToHashMap.Clear();
+            foreach (var prefab in m_prefabs)
+                RegisterLocalPrefab(prefab);
+        }
+        
         private void RegisterLocalPrefab(GameObject prefab) {
             if (!prefab.TryGetComponent(out NetSceneEntity netSceneEntity)) return;
             var hash = SerializationAPI.CalculateHash(netSceneEntity.Guid);

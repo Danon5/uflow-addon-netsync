@@ -1,19 +1,23 @@
-﻿using Cysharp.Threading.Tasks;
+﻿using System;
+using Cysharp.Threading.Tasks;
 using UFlow.Addon.ECS.Core.Runtime;
 using UFlow.Core.Runtime;
 using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     public sealed class NetSyncModule : BaseAsyncBehaviourModule<NetSyncModule> {
-        private float m_tickRolloverDelta; 
+        private float m_tickRolloverDelta;
+        private IDisposable m_entityCreatedHandle;
+        private IDisposable m_entityDestroyingHandle;
         
         public int TickRate { get; set; } = 60;
         public float TickDelta => 1f / TickRate;
         public int MaxRolloverTicks { get; set; } = 3;
         public int Tick { get; private set; }
+        public World World { get; private set; }
         internal static NetSyncModule InternalSingleton { get; private set; }
-        internal World World { get; private set; }
         internal LiteNetLibTransport Transport { get; }
+        internal ushort NextNetworkId { get; set; }
         
         public NetSyncModule() => Transport = new LiteNetLibTransport();
         
@@ -21,6 +25,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             InternalSingleton = this;
             EcsModule<NetWorld>.Load();
             World = EcsModule<NetWorld>.Get().World;
+            m_entityCreatedHandle = World.SubscribeEntityCreated(OnEntityCreated);
+            m_entityDestroyingHandle = World.SubscribeEntityDestroying(OnEntityDestroying);
             return base.LoadDirectAsync();
         }
 
@@ -35,6 +41,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             EcsModule<NetWorld>.Unload();
             World = null;
             InternalSingleton = null;
+            m_entityCreatedHandle?.Dispose();;
+            m_entityDestroyingHandle?.Dispose();
         }
 
         public override void Update() {
@@ -73,6 +81,14 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 Debug.LogWarning("NetSync overriding Time.fixedDeltaTime.");
 #endif
             }
+        }
+
+        private void OnEntityCreated(in Entity entity) {
+            
+        }
+        
+        private void OnEntityDestroying(in Entity entity) {
+            
         }
     }
 }
