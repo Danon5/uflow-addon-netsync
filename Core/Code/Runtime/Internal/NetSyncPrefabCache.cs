@@ -11,9 +11,10 @@ using UnityEditor;
 namespace UFlow.Addon.NetSync.Core.Runtime {
     internal sealed class NetSyncPrefabCache : BaseResourceCache<NetSyncPrefabCache> {
         private readonly Dictionary<ulong, GameObject> m_localHashToPrefabMap = new();
-        private readonly Dictionary<GameObject, ulong> m_localPrefabToHashMap = new();
+        private readonly Dictionary<ulong, string> m_localHashToGuidMap = new();
+        private readonly Dictionary<string, ushort> m_networkGuidToIdMap = new();
+        private readonly Dictionary<ushort, ulong> m_networkIdToHashMap = new();
         private readonly Dictionary<ushort, GameObject> m_networkIdToPrefabMap = new();
-        private readonly Dictionary<GameObject, ushort> m_networkPrefabToIdMap = new();
         [SerializeField, ListDrawerSettings(IsReadOnly = true)] 
         private List<GameObject> m_prefabs;
 
@@ -38,13 +39,14 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
         
         public IEnumerable<(ulong, ushort)> GetNetworkPrefabHashToIdEnumerable() {
-            foreach (var (id, prefab) in m_networkIdToPrefabMap)
-                yield return (m_localPrefabToHashMap[prefab], id);
+            foreach (var (id, hash) in m_networkIdToHashMap)
+                yield return (hash, id);
         }
 
         public void ClearNetworkIdMaps() {
+            m_networkGuidToIdMap.Clear();
+            m_networkIdToHashMap.Clear();
             m_networkIdToPrefabMap.Clear();
-            m_networkPrefabToIdMap.Clear();
         }
 
         public void ServerRegisterNetworkIds() {
@@ -57,14 +59,15 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         
         public void RegisterNetworkPrefab(ulong hash, ushort id) {
             var prefab = m_localHashToPrefabMap[hash];
+            m_networkIdToHashMap[id] = hash;
             m_networkIdToPrefabMap[id] = prefab;
-            m_networkPrefabToIdMap[prefab] = id;
+            m_networkGuidToIdMap[m_localHashToGuidMap[hash]] = id;
         }
 
         public GameObject GetPrefabFromNetworkId(ushort id) => m_networkIdToPrefabMap[id];
 
-        public ushort GetNetworkIdFromPrefab(GameObject prefab) => m_networkPrefabToIdMap[prefab];
-        
+        public ushort GetNetworkIdFromGuid(in string guid) => m_networkGuidToIdMap[guid];
+
 #if UNITY_EDITOR
         public static void FullRefreshEditorOnly() {
             try {
@@ -88,7 +91,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 cache.m_prefabs ??= new List<GameObject>();
                 cache.m_prefabs.Clear();
                 cache.m_prefabs.AddRange(netPrefabs);
-                cache.RefreshLocalHashMaps();
+                cache.RefreshLocalHashMap();
             }
             catch (Exception e) {
                 Debug.LogWarning(e);
@@ -96,9 +99,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 #endif
 
-        private void RefreshLocalHashMaps() {
+        private void RefreshLocalHashMap() {
             m_localHashToPrefabMap.Clear();
-            m_localPrefabToHashMap.Clear();
+            m_localHashToGuidMap.Clear();
             foreach (var prefab in m_prefabs)
                 RegisterLocalPrefab(prefab);
         }
@@ -107,7 +110,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (!prefab.TryGetComponent(out NetSceneEntity netSceneEntity)) return;
             var hash = SerializationAPI.CalculateHash(netSceneEntity.Guid);
             m_localHashToPrefabMap.Add(hash, prefab);
-            m_localPrefabToHashMap.Add(prefab, hash);
+            m_localHashToGuidMap.Add(hash, netSceneEntity.Guid);
         }
     }
 }

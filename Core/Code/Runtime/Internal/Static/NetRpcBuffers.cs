@@ -42,7 +42,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         
         private static void ClientOnRpcDeserialized(in T rpc) => AppendToBuffers(rpc);
 
-        private static void ServerOnRpcDeserialized(in T rpc, in NetClient client) => AppendToBuffers(rpc, client);
+        private static void ServerOnRpcDeserialized(in T rpc, NetClient client) => AppendToBuffers(rpc, client);
 
         private static void SubscribeToEventsIfUninitialized() {
             if (s_initialized) return;

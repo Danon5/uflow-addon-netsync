@@ -59,7 +59,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 prefabCache.RegisterNetworkPrefab(hash, id);
             }
         }
-        
+
         private static void DeserializeHandshakeResponse(ByteBuffer buffer) {
 #if UFLOW_DEBUG_ENABLED
             Debug.Log("Deserializing handshake response.");
@@ -98,10 +98,16 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                         NetSyncModule.InternalSingleton.Transport.GetClient(peer));
             }
 
+            internal static void InvokeClientRpcDeserializedDirect(in T rpc) => 
+                ClientRpcDeserializedEvent?.Invoke(rpc);
+
+            internal static void InvokeServerRpcDeserializedDirect(in T rpc, NetClient client) => 
+                ServerRpcDeserializedEvent?.Invoke(rpc, client);
+
             private static void ClearStaticCache() {
                 ClientRpcDeserializedEvent = default;
                 ServerRpcDeserializedEvent = default;
             }
-        } 
+        }
     }
 }

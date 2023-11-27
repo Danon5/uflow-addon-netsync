@@ -5,15 +5,14 @@ using Cysharp.Threading.Tasks;
 using LiteNetLib;
 using LiteNetLib.Utils;
 using UFlow.Addon.Serialization.Core.Runtime;
-using UFlow.Core.Runtime;
 using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     internal sealed class LiteNetLibTransport {
-        public static event Action<ConnectionState> ServerStateChangedEvent;
-        public static event Action<ConnectionState> ClientStateChangedEvent;
-        public static event Action<ConnectionState> HostStateChangedEvent;
-        public static event Action<NetClient> ServerClientAuthorizedEvent;
+        public event Action<ConnectionState> ServerStateChangedEvent;
+        public event Action<ConnectionState> ClientStateChangedEvent;
+        public event Action<ConnectionState> HostStateChangedEvent;
+        public event Action<NetClient> ServerClientAuthorizedEvent;
         private const string c_default_ip = "localhost";
         private const ushort c_default_port = 7777;
         private static readonly TimeSpan s_timeout = TimeSpan.FromSeconds(5);
@@ -59,8 +58,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public bool HostStartingOrStarted => HostState is ConnectionState.Starting or ConnectionState.Started;
         public bool HostStoppingOrStopped => HostState is ConnectionState.Stopping or ConnectionState.Stopped;
         public NetPeer ServerPeer { get; private set; }
-
-        static LiteNetLibTransport() => UnityGlobalEventHelper.RuntimeInitializeOnLoad += ClearStaticCache;
+        public bool OfflineMode { get; private set; }
 
         public LiteNetLibTransport() {
             var serverListener = new EventBasedNetListener();
@@ -104,6 +102,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             await ServerCleanupAsync();
             m_clients.Clear();
             ServerState = ConnectionState.Stopped;
+            OfflineMode = false;
 #if UFLOW_DEBUG_ENABLED
             Debug.Log("Server stopped.");
 #endif
@@ -129,13 +128,15 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             ClientState = ConnectionState.Stopping;
             await ClientCleanupAsync();
             ClientState = ConnectionState.Stopped;
+            OfflineMode = false;
 #if UFLOW_DEBUG_ENABLED
             Debug.Log("Client stopped.");
 #endif
         }
 
-        public async UniTask StartHostAsync(ushort port = c_default_port) {
+        public async UniTask StartHostAsync(bool offlineMode = false, ushort port = c_default_port) {
             if (HostStartingOrStarted) throw new Exception("Host already started.");
+            OfflineMode = offlineMode;
             HostState = ConnectionState.Starting;
             await StartServerAsync(port);
             if (!ServerStartingOrStarted) {
@@ -147,14 +148,19 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 HostState = ConnectionState.Stopped;
                 return;
             }
+            m_clients.Add(0, new NetClient(0));
             HostState = ConnectionState.Started;
 #if UFLOW_DEBUG_ENABLED
             Debug.Log("Host started.");
+            Debug.Log("Host connected.");
+            Debug.Log("Connected.");
 #endif
+            ServerClientAuthorizedEvent?.Invoke(m_clients[0]);
         }
 
         public async UniTask StopHostAsync() {
             if (HostStoppingOrStopped) throw new Exception("Host not yet started.");
+            OfflineMode = false;
             HostState = ConnectionState.Stopping;
             await ServerCleanupAsync();
             await ClientCleanupAsync();
@@ -165,8 +171,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
         
         public void PollEvents() {
-            m_server.PollEvents();
-            m_client.PollEvents();
+            if (m_server.IsRunning)
+                m_server.PollEvents();
+            if (m_client.IsRunning)
+                m_client.PollEvents();
         }
         
         public void ForceStop() {
@@ -191,19 +199,39 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public NetClient GetClient(NetPeer peer) => m_clients[(ushort)peer.Id];
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryGetHostClient(out NetClient hostClient) {
+            if (!HostStartingOrStarted) {
+                hostClient = null;
+                return false;
+            }
+            hostClient = m_clients[0];
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetClient(ushort id, out NetClient client) => m_clients.TryGetValue(id, out client);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool ServerIsHostClient(in NetClient client) => HostStartingOrStarted && client.id == 0;
+        public bool IsHost(NetClient client) => HostStartingOrStarted && client.id == 0;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool ServerIsHostClient(ushort clientId) => HostStartingOrStarted && clientId == 0;
+        public bool IsHost(ushort clientId) => HostStartingOrStarted && clientId == 0;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool IsHost(NetPeer peer) => HostStartingOrStarted && peer.Id == 0;
 
         public void ServerSend<T>(in T rpc,
                                   in NetClient client,
                                   NetReliability netReliability = NetReliability.ReliableOrdered) 
             where T : INetRpc {
             if (m_clients.Count == 0) return;
+            if (TryGetHostClient(out var hostClient) && client.id == hostClient.id) {
+#if UFLOW_DEBUG_ENABLED
+                Debug.Log("Client received packet.");
+#endif
+                NetDeserializer.RpcDeserializer<T>.InvokeClientRpcDeserializedDirect(rpc);
+                return;
+            }
             BeginWrite(NetPacketType.RPC);
             NetSerializer.SerializeRpc(m_buffer, rpc);
             EndWrite();
@@ -214,6 +242,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                                        NetReliability netReliability = NetReliability.ReliableOrdered)
             where T : INetRpc {
             if (m_clients.Count == 0) return;
+            if (HostStartingOrStarted) {
+#if UFLOW_DEBUG_ENABLED
+                Debug.Log("Client received packet.");
+#endif
+                NetDeserializer.RpcDeserializer<T>.InvokeClientRpcDeserializedDirect(rpc);
+            }
             BeginWrite(NetPacketType.RPC);
             NetSerializer.SerializeRpc(m_buffer, rpc);
             EndWrite();
@@ -225,6 +259,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                                              NetReliability netReliability = NetReliability.ReliableOrdered)
             where T : INetRpc {
             if (m_clients.Count == 0) return;
+            if (TryGetHostClient(out var hostClient) && excludedClient.id != hostClient.id) {
+#if UFLOW_DEBUG_ENABLED
+                Debug.Log("Client received packet.");
+#endif
+                NetDeserializer.RpcDeserializer<T>.InvokeClientRpcDeserializedDirect(rpc);
+            }
             BeginWrite(NetPacketType.RPC);
             NetSerializer.SerializeRpc(m_buffer, rpc);
             EndWrite();
@@ -241,6 +281,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public void ClientSend<T>(in T rpc,
                                   NetReliability netReliability = NetReliability.ReliableOrdered) 
             where T : INetRpc {
+            if (TryGetHostClient(out var hostClient)) {
+                NetDeserializer.RpcDeserializer<T>.InvokeServerRpcDeserializedDirect(rpc, hostClient);
+                return;
+            }
             if (ServerPeer.ConnectionState != LiteNetLib.ConnectionState.Connected)
                 throw new Exception("Cannot send rpc when not connected.");
             BeginWrite(NetPacketType.RPC);
@@ -275,6 +319,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void EndWrite() => m_writer.Put(m_buffer.GetBytesToCursor());
 
+        internal void Write<T>(in T value) where T : unmanaged => m_buffer.WriteUnsafe(value);
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void SendBufferPayloadToServer(NetReliability netReliability = NetReliability.ReliableOrdered) =>
             ServerPeer.Send(m_writer, (DeliveryMethod)netReliability);
@@ -286,8 +332,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void SendBufferPayloadToAllClients(NetReliability netReliability = NetReliability.ReliableOrdered) {
-            foreach (var client in m_clients)
+            foreach (var client in m_clients) {
+                if (TryGetHostClient(out var hostClient) && client.Key == hostClient.id) continue;
                 m_peers[client.Key].Send(m_writer, (DeliveryMethod)netReliability);
+            }
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -295,22 +343,19 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                                                           NetReliability netReliability = NetReliability.ReliableOrdered) {
             foreach (var client in m_clients) {
                 if (client.Key == excludedClient.id) continue;
+                if (TryGetHostClient(out var hostClient) && client.Key == hostClient.id) continue;
                 m_peers[client.Key].Send(m_writer, (DeliveryMethod)netReliability);
             }
         }
 
-        private static void ClearStaticCache() {
-            ServerStateChangedEvent = default;
-            ClientStateChangedEvent = default;
-            HostStateChangedEvent = default;
-            ServerClientAuthorizedEvent = default;
-        }
-        
         private static void ServerOnConnectionRequest(ConnectionRequest request) => request.Accept();
         
         private async UniTask<bool> ServerSetupAsync(ushort port) {
-            var result = m_server.Start(port);
-            await UniTask.WaitUntil(() => m_server.IsRunning).Timeout(s_timeout);
+            var result = true;
+            if (!OfflineMode) {
+                result = m_server.Start(port);
+                await UniTask.WaitUntil(() => m_server.IsRunning).Timeout(s_timeout);
+            }
             RpcTypeIdMap.ServerRegisterNetworkRpcs();
             var prefabCache = NetSyncPrefabCache.Get();
             if (prefabCache == null) return result;
@@ -319,13 +364,16 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         private async UniTask ServerCleanupAsync() {
-            m_server.Stop(true);
-            await UniTask.WaitUntil(() => !m_server.IsRunning);
+            if (!OfflineMode) {
+                m_server.Stop(true);
+                await UniTask.WaitUntil(() => !m_server.IsRunning);
+            }
 #if UFLOW_DEBUG_ENABLED
             if (HostState == ConnectionState.Stopping)
                 Debug.Log("Server stopped.");
 #endif
             m_peers.Clear();
+            m_clients.Clear();
             RpcTypeIdMap.ClearNetworkRpcs();
             var prefabCache = NetSyncPrefabCache.Get();
             if (prefabCache == null) return;
@@ -333,6 +381,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         private async UniTask<bool> ClientSetupAsync(string ip, ushort port) {
+            if (OfflineMode) return true;
             m_client.Start();
             ServerPeer = m_client.Connect(ip, port, string.Empty);
             await UniTask.WaitUntil(() => m_client.IsRunning).Timeout(s_timeout);
@@ -344,8 +393,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         private async UniTask ClientCleanupAsync() {
-            m_client.Stop();
-            await UniTask.WaitUntil(() => !m_client.IsRunning);
+            if (!OfflineMode) {
+                m_client.Stop();
+                await UniTask.WaitUntil(() => !m_client.IsRunning);
+            }
 #if UFLOW_DEBUG_ENABLED
             if (HostState == ConnectionState.Stopping)
                 Debug.Log("Client stopped.");
@@ -360,6 +411,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #if UFLOW_DEBUG_ENABLED
             Debug.Log($"Peer {peer.Id} connected.");
 #endif
+            if (HostStartingOrStarted) return;
             m_peers.Add((ushort)peer.Id, peer);
             BeginWrite(NetPacketType.Handshake);
             NetSerializer.SerializeHandshake(m_buffer);
