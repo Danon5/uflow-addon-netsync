@@ -23,6 +23,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 case NetPacketType.RPC:
                     DeserializeRpc(buffer, peer);
                     break;
+                case NetPacketType.CreateEntity:
+                    DeserializeCreateEntity(buffer);
+                    break;
+                case NetPacketType.DestroyEntity:
+                    DeserializeDestroyEntity(buffer);
+                    break;
                 default:
                     throw new Exception($"Receiving unhandled packet {packetType}.");
             }
@@ -79,6 +85,22 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 s_deserializeRpcDelegates.Add(id, @delegate);
             }
             @delegate!.Invoke(buffer, peer);
+        }
+
+        private static void DeserializeCreateEntity(ByteBuffer buffer) {
+            var netId = buffer.ReadUShort();
+            if (NetSyncModule.InternalSingleton == null) return;
+            NetSyncModule.InternalSingleton.World.CreateEntity().Set(new NetSynchronize {
+                netId = netId
+            });
+            Debug.Log($"Created entity with netId {netId} on client.");
+        }
+        
+        private static void DeserializeDestroyEntity(ByteBuffer buffer) {
+            var netId = buffer.ReadUShort();
+            if (NetSyncModule.InternalSingleton == null) return;
+            NetSyncAPI.GetEntityFromNetId(netId).Destroy();
+            Debug.Log($"Destroyed entity with netId {netId} on client.");
         }
 
         private delegate void DeserializeRpcDelegate(ByteBuffer buffer, NetPeer peer);

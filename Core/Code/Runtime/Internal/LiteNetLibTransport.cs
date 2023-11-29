@@ -13,6 +13,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public event Action<ConnectionState> ClientStateChangedEvent;
         public event Action<ConnectionState> HostStateChangedEvent;
         public event Action<NetClient> ServerClientAuthorizedEvent;
+        public event Action<NetClient> ServerClientDisconnectedEvent; 
         private const string c_default_ip = "localhost";
         private const ushort c_default_port = 7777;
         private static readonly TimeSpan s_timeout = TimeSpan.FromSeconds(5);
@@ -21,7 +22,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         private readonly Dictionary<ushort, NetClient> m_clients = new();
         private readonly NetManager m_server;
         private readonly NetManager m_client;
-        private readonly ByteBuffer m_buffer;
         private readonly NetDataWriter m_writer;
         private ConnectionState m_serverState;
         private ConnectionState m_clientState;
@@ -59,6 +59,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public bool HostStoppingOrStopped => HostState is ConnectionState.Stopping or ConnectionState.Stopped;
         public NetPeer ServerPeer { get; private set; }
         public bool OfflineMode { get; private set; }
+        internal ByteBuffer Buffer { get; }
 
         public LiteNetLibTransport() {
             var serverListener = new EventBasedNetListener();
@@ -78,7 +79,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 AutoRecycle = true,
                 DisconnectTimeout = s_timeoutMS
             };
-            m_buffer = new ByteBuffer(true);
+            Buffer = new ByteBuffer(true);
             m_writer = new NetDataWriter(true);
             RpcTypeIdMap.RegisterAllLocalRpcsIfRequired();
         }
@@ -233,7 +234,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 return;
             }
             BeginWrite(NetPacketType.RPC);
-            NetSerializer.SerializeRpc(m_buffer, rpc);
+            NetSerializer.SerializeRpc(Buffer, rpc);
             EndWrite();
             SendBufferPayloadToClient(client, netReliability);
         }
@@ -249,7 +250,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 NetDeserializer.RpcDeserializer<T>.InvokeClientRpcDeserializedDirect(rpc);
             }
             BeginWrite(NetPacketType.RPC);
-            NetSerializer.SerializeRpc(m_buffer, rpc);
+            NetSerializer.SerializeRpc(Buffer, rpc);
             EndWrite();
             SendBufferPayloadToAllClients(netReliability);
         }
@@ -266,7 +267,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 NetDeserializer.RpcDeserializer<T>.InvokeClientRpcDeserializedDirect(rpc);
             }
             BeginWrite(NetPacketType.RPC);
-            NetSerializer.SerializeRpc(m_buffer, rpc);
+            NetSerializer.SerializeRpc(Buffer, rpc);
             EndWrite();
             SendBufferPayloadToAllClientsExcept(excludedClient, netReliability);
         }
@@ -288,14 +289,14 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (ServerPeer.ConnectionState != LiteNetLib.ConnectionState.Connected)
                 throw new Exception("Cannot send rpc when not connected.");
             BeginWrite(NetPacketType.RPC);
-            NetSerializer.SerializeRpc(m_buffer, rpc);
+            NetSerializer.SerializeRpc(Buffer, rpc);
             EndWrite();
             SendBufferPayloadToServer(netReliability);
         }
 
         public void ClientPeerHandshakeResponse() {
             BeginWrite(NetPacketType.HandshakeResponse);
-            NetSerializer.SerializeHandshakeResponse(m_buffer);
+            NetSerializer.SerializeHandshakeResponse(Buffer);
             EndWrite();
             SendBufferPayloadToServer();
         }
@@ -309,17 +310,19 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             ServerClientAuthorizedEvent?.Invoke(client);
         }
 
+        public IEnumerable<NetClient> GetClientsEnumerable() => m_clients.Values;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void BeginWrite(NetPacketType type) {
             m_writer.Reset();
-            m_buffer.Reset();
-            m_buffer.Write((byte)type);
+            Buffer.Reset();
+            Buffer.Write((byte)type);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void EndWrite() => m_writer.Put(m_buffer.GetBytesToCursor());
+        internal void EndWrite() => m_writer.Put(Buffer.GetBytesToCursor());
 
-        internal void Write<T>(in T value) where T : unmanaged => m_buffer.WriteUnsafe(value);
+        internal void Write<T>(in T value) where T : unmanaged => Buffer.WriteUnsafe(value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void SendBufferPayloadToServer(NetReliability netReliability = NetReliability.ReliableOrdered) =>
@@ -411,10 +414,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #if UFLOW_DEBUG_ENABLED
             Debug.Log($"Peer {peer.Id} connected.");
 #endif
-            if (HostStartingOrStarted) return;
+            if (IsHost((ushort)peer.Id)) return;
             m_peers.Add((ushort)peer.Id, peer);
             BeginWrite(NetPacketType.Handshake);
-            NetSerializer.SerializeHandshake(m_buffer);
+            NetSerializer.SerializeHandshake(Buffer);
             EndWrite();
             peer.Send(m_writer, DeliveryMethod.ReliableOrdered);
         }
@@ -423,6 +426,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #if UFLOW_DEBUG_ENABLED
             Debug.Log($"Peer {peer.Id} disconnected: {info.Reason}.");
 #endif
+            var peerId = (ushort)peer.Id;
+            if (!m_clients.TryGetValue(peerId, out var client)) return;
+            ServerClientDisconnectedEvent?.Invoke(client);
+            m_clients.Remove(peerId);
         }
 
         private void ServerOnReceive(NetPeer peer, NetPacketReader reader, byte channel, DeliveryMethod deliveryMethod) {
@@ -430,7 +437,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             Debug.Log("Server received packet.");
 #endif
             BeginRead(reader, out var packetType);
-            NetDeserializer.Deserialize(m_buffer, packetType, peer);
+            NetDeserializer.Deserialize(Buffer, packetType, peer);
             EndRead(reader);
         }
 
@@ -452,14 +459,14 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             Debug.Log("Client received packet.");
 #endif
             BeginRead(reader, out var packetType);
-            NetDeserializer.Deserialize(m_buffer, packetType, peer);
+            NetDeserializer.Deserialize(Buffer, packetType, peer);
             EndRead(reader);
         }
 
         private void BeginRead(NetDataReader reader, out NetPacketType packetType) {
-            m_buffer.Reset();
-            m_buffer.TransferBytesToBuffer(reader.RawData, 4, reader.AvailableBytes);
-            packetType = (NetPacketType)m_buffer.ReadByte();
+            Buffer.Reset();
+            Buffer.TransferBytesToBuffer(reader.RawData, 4, reader.AvailableBytes);
+            packetType = (NetPacketType)Buffer.ReadByte();
         }
 
         private void EndRead(NetPacketReader reader) => reader.Recycle();

@@ -26,5 +26,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             buffer.Write(RpcTypeIdMap.GetNetworkIdFromType(typeof(T)));
             SerializationAPI.Serialize(buffer, ref rpc);
         }
+
+        public static void SerializeCreateEntity(ByteBuffer buffer, ushort netId) {
+            buffer.Write(netId);
+        }
+        
+        public static void SerializeDestroyEntity(ByteBuffer buffer, ushort netId) {
+            buffer.Write(netId);
+        }
     }
 }

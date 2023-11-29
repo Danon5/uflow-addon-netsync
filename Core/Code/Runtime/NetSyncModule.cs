@@ -15,13 +15,21 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public World World { get; private set; }
         internal static NetSyncModule InternalSingleton { get; private set; }
         internal LiteNetLibTransport Transport { get; }
+        internal NetClientAwarenessMap AwarenessMap { get; }
+        internal NetIdEntityMap EntityMap { get; }
         internal ushort NextNetworkId { get; set; }
         
-        public NetSyncModule() => Transport = new LiteNetLibTransport();
-        
+        public NetSyncModule() {
+            Transport = new LiteNetLibTransport();
+            AwarenessMap = new NetClientAwarenessMap();
+            EntityMap = new NetIdEntityMap();
+        }
+
         public override UniTask LoadDirectAsync() {
             InternalSingleton = this;
             Transport.ServerStateChangedEvent += OnServerStateChanged;
+            Transport.ServerClientAuthorizedEvent += OnServerAuthorizedClient;
+            Transport.ServerClientDisconnectedEvent += OnServerDisconnectedClient;
             Transport.ClientStateChangedEvent += OnClientStateChanged;
             return base.LoadDirectAsync();
         }
@@ -35,6 +43,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 await Transport.StopClientAsync();
             Transport.ForceStop();
             Transport.ServerStateChangedEvent -= OnServerStateChanged;
+            Transport.ServerClientAuthorizedEvent -= OnServerAuthorizedClient;
+            Transport.ServerClientDisconnectedEvent -= OnServerDisconnectedClient;
             Transport.ClientStateChangedEvent -= OnClientStateChanged;
             EnsureNetWorldDestroyed();
             InternalSingleton = null;
@@ -89,37 +99,49 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             World = null;
         }
 
-        private void OnServerStateChanged(ConnectionState connectionState) {
-            switch (connectionState) {
+        private void OnServerStateChanged(ConnectionState state) {
+            switch (state) {
                 case ConnectionState.Starting:
                     break;
                 case ConnectionState.Started:
+                    AwarenessMap.Clear();
+                    EntityMap.Clear();
                     EnsureNetWorldCreated();
                     break;
                 case ConnectionState.Stopping:
                     break;
                 case ConnectionState.Stopped:
                     EnsureNetWorldDestroyed();
+                    AwarenessMap.Clear();
+                    EntityMap.Clear();
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(connectionState), connectionState, null);
+                    throw new ArgumentOutOfRangeException(nameof(state), state, null);
             }
         }
-
-        private void OnClientStateChanged(ConnectionState connectionState) {
-            switch (connectionState) {
+        
+        private void OnServerAuthorizedClient(NetClient client) => AwarenessMap.AddClientCache(client);
+        
+        private void OnServerDisconnectedClient(NetClient client) => AwarenessMap.RemoveClientCache(client);
+        
+        private void OnClientStateChanged(ConnectionState state) {
+            switch (state) {
                 case ConnectionState.Starting:
                     break;
                 case ConnectionState.Started:
+                    AwarenessMap.Clear();
+                    EntityMap.Clear();
                     EnsureNetWorldCreated();
                     break;
                 case ConnectionState.Stopping:
                     break;
                 case ConnectionState.Stopped:
                     EnsureNetWorldDestroyed();
+                    AwarenessMap.Clear();
+                    EntityMap.Clear();
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(connectionState), connectionState, null);
+                    throw new ArgumentOutOfRangeException(nameof(state), state, null);
             }
         }
     }

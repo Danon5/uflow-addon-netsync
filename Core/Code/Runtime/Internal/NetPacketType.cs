@@ -2,6 +2,8 @@
     public enum NetPacketType : byte {
         Handshake,
         HandshakeResponse,
-        RPC
+        RPC,
+        CreateEntity,
+        DestroyEntity
     }
 }

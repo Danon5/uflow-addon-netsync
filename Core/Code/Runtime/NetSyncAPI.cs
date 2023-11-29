@@ -1,31 +1,58 @@
 ﻿using System;
+using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
+using UFlow.Addon.ECS.Core.Runtime;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     public static class NetSyncAPI {
         public static bool IsServer => ServerAPI.StartingOrStarted;
         public static bool IsClient => ClientAPI.StartingOrStarted;
         public static bool IsHost => HostAPI.StartingOrStarted;
-        public static bool OfflineMode => NetSyncModule.InternalSingleton != null && 
-            NetSyncModule.InternalSingleton.Transport.OfflineMode; 
-        
+        public static bool OfflineMode => NetSyncModule.InternalSingleton != null &&
+            NetSyncModule.InternalSingleton.Transport.OfflineMode;
+
+        public static Entity GetEntityFromNetId(ushort netId) {
+            NetSyncModule.ThrowIfNotLoaded();
+            return NetSyncModule.InternalSingleton.EntityMap.Get(netId);
+        }
+
         public static class ServerAPI {
-            public static ConnectionState State => NetSyncModule.InternalSingleton == null ?
-                default : 
-                NetSyncModule.InternalSingleton.Transport.ServerState;
-            public static bool StartingOrStarted => NetSyncModule.InternalSingleton != null && 
+            public static ConnectionState State => NetSyncModule.InternalSingleton == null
+                ? default
+                : NetSyncModule.InternalSingleton.Transport.ServerState;
+            public static bool StartingOrStarted => NetSyncModule.InternalSingleton != null &&
                 NetSyncModule.InternalSingleton.Transport.ServerStartingOrStarted;
-            public static bool StoppingOrStopped => NetSyncModule.InternalSingleton != null && 
+            public static bool StoppingOrStopped => NetSyncModule.InternalSingleton != null &&
                 NetSyncModule.InternalSingleton.Transport.ServerStoppingOrStopped;
             
             public static void SubscribeStateChanged(Action<ConnectionState> action) {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.ServerStateChangedEvent += action;
             }
-            
+
             public static void UnsubscribeStateChanged(Action<ConnectionState> action) {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.ServerStateChangedEvent -= action;
+            }
+
+            public static void SubscribeClientAuthorized(Action<NetClient> action) {
+                NetSyncModule.ThrowIfNotLoaded();
+                NetSyncModule.InternalSingleton.Transport.ServerClientAuthorizedEvent += action;
+            }
+
+            public static void UnsubscribeClientAuthorized(Action<NetClient> action) {
+                NetSyncModule.ThrowIfNotLoaded();
+                NetSyncModule.InternalSingleton.Transport.ServerClientAuthorizedEvent -= action;
+            }
+
+            public static void SubscribeClientDisconnected(Action<NetClient> action) {
+                NetSyncModule.ThrowIfNotLoaded();
+                NetSyncModule.InternalSingleton.Transport.ServerClientDisconnectedEvent += action;
+            }
+
+            public static void UnsubscribeClientDisconnected(Action<NetClient> action) {
+                NetSyncModule.ThrowIfNotLoaded();
+                NetSyncModule.InternalSingleton.Transport.ServerClientDisconnectedEvent -= action;
             }
 
             public static UniTask StartServerAsync() {
@@ -47,64 +74,77 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.ServerSend(rpc, client);
             }
-            
+
             public static void Send<T>(in T rpc, ushort clientId) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
                 if (!NetSyncModule.InternalSingleton.Transport.TryGetClient(clientId, out var client))
                     throw new Exception($"No client with id {clientId}.");
                 NetSyncModule.InternalSingleton.Transport.ServerSend(rpc, client);
             }
-            
+
             public static void SendToAll<T>(in T rpc) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.ServerSendToAll(rpc);
             }
-            
+
             public static void SendToAllExcept<T>(in T rpc, NetClient excludedClient) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.ServerSendToAllExcept(rpc, excludedClient);
             }
-            
+
             public static void SendToAllExcept<T>(in T rpc, ushort excludedClientId) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
                 if (!NetSyncModule.InternalSingleton.Transport.TryGetClient(excludedClientId, out var client))
                     throw new Exception($"No client with id {excludedClientId}.");
                 NetSyncModule.InternalSingleton.Transport.ServerSendToAllExcept(rpc, client);
             }
-            
+
             public static void SendToAllExceptHost<T>(in T rpc) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.ServerSendToAllExceptHost(rpc);
             }
-            
-            public static void RegisterHandler<T>(in ServerRpcHandlerDelegate<T> handler) where T : INetRpc => 
+
+            public static void RegisterHandler<T>(in ServerRpcHandlerDelegate<T> handler) where T : INetRpc =>
                 NetDeserializer.RpcDeserializer<T>.ServerRpcDeserializedEvent += handler;
 
-            public static void UnregisterHandler<T>(in ServerRpcHandlerDelegate<T> handler) where T : INetRpc => 
+            public static void UnregisterHandler<T>(in ServerRpcHandlerDelegate<T> handler) where T : INetRpc =>
                 NetDeserializer.RpcDeserializer<T>.ServerRpcDeserializedEvent -= handler;
 
             public static NetSynchronize GetNextValidNetSynchronizeComponent() => new() {
-                id = NetSyncModule.InternalSingleton.NextNetworkId++
+                netId = NetSyncModule.InternalSingleton.NextNetworkId++
             };
+
+            public static bool IsHostClient(NetClient client) => NetSyncModule.InternalSingleton != null &&
+                NetSyncModule.InternalSingleton.Transport.IsHost(client);
+
+            public static bool IsHostClient(ushort clientId) => NetSyncModule.InternalSingleton != null &&
+                NetSyncModule.InternalSingleton.Transport.IsHost(clientId);
+
+            public static IEnumerable<NetClient> GetClientsEnumerable() {
+                NetSyncModule.ThrowIfNotLoaded();
+                return NetSyncModule.InternalSingleton.Transport.GetClientsEnumerable();
+            }
         }
 
         public static class ClientAPI {
             public static ConnectionState State => NetSyncModule.InternalSingleton.Transport.ClientState;
-            public static bool StartingOrStarted => NetSyncModule.InternalSingleton != null && 
+
+            public static bool StartingOrStarted => NetSyncModule.InternalSingleton != null &&
                 NetSyncModule.InternalSingleton.Transport.ClientStartingOrStarted;
-            public static bool StoppingOrStopped => NetSyncModule.InternalSingleton != null && 
+
+            public static bool StoppingOrStopped => NetSyncModule.InternalSingleton != null &&
                 NetSyncModule.InternalSingleton.Transport.ClientStoppingOrStopped;
-            
+
             public static void SubscribeStateChanged(Action<ConnectionState> action) {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.ClientStateChangedEvent += action;
             }
-            
+
             public static void UnsubscribeStateChanged(Action<ConnectionState> action) {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.ClientStateChangedEvent -= action;
             }
-            
+
             public static UniTask StartClientAsync() {
                 NetSyncModule.ThrowIfNotLoaded();
                 return NetSyncModule.InternalSingleton.Transport.StartClientAsync();
@@ -120,10 +160,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 return NetSyncModule.InternalSingleton.Transport.StopClientAsync();
             }
 
-            public static void RegisterHandler<T>(in ClientRpcHandlerDelegate<T> handler) where T : INetRpc => 
+            public static void RegisterHandler<T>(in ClientRpcHandlerDelegate<T> handler) where T : INetRpc =>
                 NetDeserializer.RpcDeserializer<T>.ClientRpcDeserializedEvent += handler;
 
-            public static void UnregisterHandler<T>(in ClientRpcHandlerDelegate<T> handler) where T : INetRpc => 
+            public static void UnregisterHandler<T>(in ClientRpcHandlerDelegate<T> handler) where T : INetRpc =>
                 NetDeserializer.RpcDeserializer<T>.ClientRpcDeserializedEvent -= handler;
 
             public static void Send<T>(in T rpc) where T : INetRpc {
@@ -133,19 +173,18 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         public static class HostAPI {
-            public static ConnectionState State => NetSyncModule.InternalSingleton == null ?
-                default : 
-                NetSyncModule.InternalSingleton.Transport.HostState;
-            public static bool StartingOrStarted => NetSyncModule.InternalSingleton != null && 
+            public static ConnectionState State =>
+                NetSyncModule.InternalSingleton == null ? default : NetSyncModule.InternalSingleton.Transport.HostState;
+            public static bool StartingOrStarted => NetSyncModule.InternalSingleton != null &&
                 NetSyncModule.InternalSingleton.Transport.HostStartingOrStarted;
-            public static bool StoppingOrStopped => NetSyncModule.InternalSingleton != null && 
+            public static bool StoppingOrStopped => NetSyncModule.InternalSingleton != null &&
                 NetSyncModule.InternalSingleton.Transport.HostStoppingOrStopped;
-            
+
             public static void SubscribeStateChanged(Action<ConnectionState> action) {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.HostStateChangedEvent += action;
             }
-            
+
             public static void UnsubscribeStateChanged(Action<ConnectionState> action) {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.HostStateChangedEvent -= action;
@@ -155,7 +194,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 NetSyncModule.ThrowIfNotLoaded();
                 return NetSyncModule.InternalSingleton.Transport.StartHostAsync(true);
             }
-            
+
             public static UniTask StartHostOnlineAsync() {
                 NetSyncModule.ThrowIfNotLoaded();
                 return NetSyncModule.InternalSingleton.Transport.StartHostAsync();
