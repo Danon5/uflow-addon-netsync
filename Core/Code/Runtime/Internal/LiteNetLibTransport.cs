@@ -462,8 +462,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             packetType = (NetPacketType)m_buffer.ReadByte();
         }
 
-        private void EndRead(NetPacketReader reader) {
-            reader.Recycle();
-        }
+        private void EndRead(NetPacketReader reader) => reader.Recycle();
     }
 }

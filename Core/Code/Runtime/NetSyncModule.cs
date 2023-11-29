@@ -21,8 +21,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         
         public override UniTask LoadDirectAsync() {
             InternalSingleton = this;
-            EcsModule<NetWorld>.Load();
-            World = EcsModule<NetWorld>.Get().World;
+            Transport.ServerStateChangedEvent += OnServerStateChanged;
+            Transport.ClientStateChangedEvent += OnClientStateChanged;
             return base.LoadDirectAsync();
         }
 
@@ -34,13 +34,15 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             else if (Transport.ClientStartingOrStarted)
                 await Transport.StopClientAsync();
             Transport.ForceStop();
-            EcsModule<NetWorld>.Unload();
-            World = null;
+            Transport.ServerStateChangedEvent -= OnServerStateChanged;
+            Transport.ClientStateChangedEvent -= OnClientStateChanged;
+            EnsureNetWorldDestroyed();
             InternalSingleton = null;
         }
 
         public override void Update() {
             if (!Transport.ServerStartingOrStarted && !Transport.ClientStartingOrStarted) return;
+            if (World == null) return;
            EnsurePhysicsSimulationSettings();
             m_tickRolloverDelta += Time.deltaTime;
             var ticksExecuted = 0;
@@ -74,6 +76,50 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #if UFLOW_DEBUG_ENABLED
                 Debug.LogWarning("NetSync overriding Time.fixedDeltaTime.");
 #endif
+            }
+        }
+
+        private void EnsureNetWorldCreated() {
+            EcsModule<NetWorld>.EnsureLoaded();
+            World = EcsModule<NetWorld>.Get().World;
+        }
+        
+        private void EnsureNetWorldDestroyed() {
+            EcsModule<NetWorld>.EnsureUnloaded();
+            World = null;
+        }
+
+        private void OnServerStateChanged(ConnectionState connectionState) {
+            switch (connectionState) {
+                case ConnectionState.Starting:
+                    break;
+                case ConnectionState.Started:
+                    EnsureNetWorldCreated();
+                    break;
+                case ConnectionState.Stopping:
+                    break;
+                case ConnectionState.Stopped:
+                    EnsureNetWorldDestroyed();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(connectionState), connectionState, null);
+            }
+        }
+
+        private void OnClientStateChanged(ConnectionState connectionState) {
+            switch (connectionState) {
+                case ConnectionState.Starting:
+                    break;
+                case ConnectionState.Started:
+                    EnsureNetWorldCreated();
+                    break;
+                case ConnectionState.Stopping:
+                    break;
+                case ConnectionState.Stopped:
+                    EnsureNetWorldDestroyed();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(connectionState), connectionState, null);
             }
         }
     }

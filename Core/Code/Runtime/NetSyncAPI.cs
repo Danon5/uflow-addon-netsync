@@ -6,12 +6,17 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public static bool IsServer => ServerAPI.StartingOrStarted;
         public static bool IsClient => ClientAPI.StartingOrStarted;
         public static bool IsHost => HostAPI.StartingOrStarted;
-        public static bool OfflineMode => NetSyncModule.InternalSingleton.Transport.OfflineMode; 
+        public static bool OfflineMode => NetSyncModule.InternalSingleton != null && 
+            NetSyncModule.InternalSingleton.Transport.OfflineMode; 
         
         public static class ServerAPI {
-            public static ConnectionState State => NetSyncModule.InternalSingleton.Transport.ServerState;
-            public static bool StartingOrStarted => NetSyncModule.InternalSingleton.Transport.ServerStartingOrStarted;
-            public static bool StoppingOrStopped => NetSyncModule.InternalSingleton.Transport.ServerStoppingOrStopped;
+            public static ConnectionState State => NetSyncModule.InternalSingleton == null ?
+                default : 
+                NetSyncModule.InternalSingleton.Transport.ServerState;
+            public static bool StartingOrStarted => NetSyncModule.InternalSingleton != null && 
+                NetSyncModule.InternalSingleton.Transport.ServerStartingOrStarted;
+            public static bool StoppingOrStopped => NetSyncModule.InternalSingleton != null && 
+                NetSyncModule.InternalSingleton.Transport.ServerStoppingOrStopped;
             
             public static void SubscribeStateChanged(Action<ConnectionState> action) {
                 NetSyncModule.ThrowIfNotLoaded();
@@ -85,8 +90,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         public static class ClientAPI {
             public static ConnectionState State => NetSyncModule.InternalSingleton.Transport.ClientState;
-            public static bool StartingOrStarted => NetSyncModule.InternalSingleton.Transport.ClientStartingOrStarted;
-            public static bool StoppingOrStopped => NetSyncModule.InternalSingleton.Transport.ClientStoppingOrStopped;
+            public static bool StartingOrStarted => NetSyncModule.InternalSingleton != null && 
+                NetSyncModule.InternalSingleton.Transport.ClientStartingOrStarted;
+            public static bool StoppingOrStopped => NetSyncModule.InternalSingleton != null && 
+                NetSyncModule.InternalSingleton.Transport.ClientStoppingOrStopped;
             
             public static void SubscribeStateChanged(Action<ConnectionState> action) {
                 NetSyncModule.ThrowIfNotLoaded();
@@ -126,9 +133,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         public static class HostAPI {
-            public static ConnectionState State => NetSyncModule.InternalSingleton.Transport.HostState;
-            public static bool StartingOrStarted => NetSyncModule.InternalSingleton.Transport.HostStartingOrStarted;
-            public static bool StoppingOrStopped => NetSyncModule.InternalSingleton.Transport.HostStoppingOrStopped;
+            public static ConnectionState State => NetSyncModule.InternalSingleton == null ?
+                default : 
+                NetSyncModule.InternalSingleton.Transport.HostState;
+            public static bool StartingOrStarted => NetSyncModule.InternalSingleton != null && 
+                NetSyncModule.InternalSingleton.Transport.HostStartingOrStarted;
+            public static bool StoppingOrStopped => NetSyncModule.InternalSingleton != null && 
+                NetSyncModule.InternalSingleton.Transport.HostStoppingOrStopped;
             
             public static void SubscribeStateChanged(Action<ConnectionState> action) {
                 NetSyncModule.ThrowIfNotLoaded();
