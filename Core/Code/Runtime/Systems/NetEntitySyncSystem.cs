@@ -12,13 +12,22 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         protected override void IterateEntity(World world, in Entity entity) {
             ref var netSynchronize = ref entity.Get<NetSynchronize>();
+            var isSceneEntity = entity.TryGet(out SceneEntityRef sceneEntityRef);
             var netSyncModule = NetSyncModule.InternalSingleton;
             var awarenessCache = netSyncModule.AwarenessMap;
             foreach (var client in NetSyncAPI.ServerAPI.GetClientsEnumerable()) {
                 if (NetSyncAPI.ServerAPI.IsHostClient(client)) continue;
                 if (awarenessCache.ClientIsAwareOf(client, netSynchronize.netId)) continue;
-                netSyncModule.Transport.BeginWrite(NetPacketType.CreateEntity);
-                NetSerializer.SerializeCreateEntity(netSyncModule.Transport.Buffer, netSynchronize.netId);
+                if (isSceneEntity) {
+                    netSyncModule.Transport.BeginWrite(NetPacketType.CreateSceneEntity);
+                    NetSerializer.SerializeCreateEntity(netSyncModule.Transport.Buffer, netSynchronize.netId);
+                    var prefabId = NetSyncPrefabCache.Get().GetNetworkIdFromGuid(sceneEntityRef.value.Guid);
+                    NetSerializer.SerializeCreateEntity(netSyncModule.Transport.Buffer, prefabId);
+                }
+                else {
+                    netSyncModule.Transport.BeginWrite(NetPacketType.CreateEntity);
+                    NetSerializer.SerializeCreateEntity(netSyncModule.Transport.Buffer, netSynchronize.netId);
+                }
                 netSyncModule.Transport.EndWrite();
                 netSyncModule.Transport.SendBufferPayloadToClient(client);
                 awarenessCache.MarkClientAware(client, netSynchronize.netId);

@@ -4,6 +4,7 @@
         HandshakeResponse,
         RPC,
         CreateEntity,
-        DestroyEntity
+        CreateSceneEntity,
+        DestroyEntity,
     }
 }

@@ -1,5 +1,4 @@
-﻿using System;
-using UFlow.Addon.ECS.Core.Runtime;
+﻿using UFlow.Addon.ECS.Core.Runtime;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     public sealed class NetSceneEntity : SceneEntity {
@@ -7,8 +6,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         protected override void AddSpecialComponentsBeforeBaking() {
             base.AddSpecialComponentsBeforeBaking();
-            if (!NetSyncAPI.IsServer)
-                throw new Exception("Attempting to create network entity when server is not started.");
+            if (!NetSyncAPI.IsServer) return;
             Entity.Set(NetSyncAPI.ServerAPI.GetNextValidNetSynchronizeComponent());
         }
     }

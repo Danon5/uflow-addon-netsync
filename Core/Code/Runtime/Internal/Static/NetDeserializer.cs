@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using LiteNetLib;
+using UFlow.Addon.ECS.Core.Runtime;
 using UFlow.Addon.Serialization.Core.Runtime;
 using UFlow.Core.Runtime;
 using UnityEngine;
@@ -25,6 +26,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                     break;
                 case NetPacketType.CreateEntity:
                     DeserializeCreateEntity(buffer);
+                    break;
+                case NetPacketType.CreateSceneEntity:
+                    DeserializeCreateSceneEntity(buffer);
                     break;
                 case NetPacketType.DestroyEntity:
                     DeserializeDestroyEntity(buffer);
@@ -94,6 +98,16 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 netId = netId
             });
             Debug.Log($"Created entity with netId {netId} on client.");
+        }
+        
+        private static void DeserializeCreateSceneEntity(ByteBuffer buffer) {
+            var netId = buffer.ReadUShort();
+            var prefabId = buffer.ReadUShort();
+            if (NetSyncModule.InternalSingleton == null) return;
+            NetSyncPrefabCache.Get().GetPrefabFromNetworkId(prefabId).Instantiate().AsEntity().Set(new NetSynchronize {
+                netId = netId
+            });
+            Debug.Log($"Created scene entity with netId {netId} on client.");
         }
         
         private static void DeserializeDestroyEntity(ByteBuffer buffer) {
