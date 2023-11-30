@@ -312,6 +312,20 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         public IEnumerable<NetClient> GetClientsEnumerable() => m_clients.Values;
 
+        public void ServerSetStatisticsEnabled(bool state) => m_server.EnableStatistics = state;
+        
+        public void ClientSetStatisticsEnabled(bool state) => m_client.EnableStatistics = state;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public NetStatisticData ServerGetStatistics() => new(m_server.Statistics);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public NetStatisticData ClientGetStatistics() => new(m_client.Statistics);
+
+        public void ServerResetStatistics() => m_server.Statistics.Reset();
+        
+        public void ClientResetStatistics() => m_client.Statistics.Reset();
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void BeginWrite(NetPacketType type) {
             m_writer.Reset();

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Cysharp.Threading.Tasks;
 using UFlow.Addon.ECS.Core.Runtime;
 
@@ -10,10 +11,23 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public static bool IsHost => HostAPI.StartingOrStarted;
         public static bool OfflineMode => NetSyncModule.InternalSingleton != null &&
             NetSyncModule.InternalSingleton.Transport.OfflineMode;
-
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Entity GetEntityFromNetId(ushort netId) {
             NetSyncModule.ThrowIfNotLoaded();
             return NetSyncModule.InternalSingleton.EntityMap.Get(netId);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool TryGetEntityFromNetId(ushort netId, out Entity entity) {
+            NetSyncModule.ThrowIfNotLoaded();
+            return NetSyncModule.InternalSingleton.EntityMap.TryGet(netId, out entity);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SetStatisticsEnabled(bool state) {
+            NetSyncModule.ThrowIfNotLoaded();
+            NetSyncModule.InternalSingleton.EnableStatistics = state;
         }
 
         public static class ServerAPI {
@@ -70,11 +84,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 return NetSyncModule.InternalSingleton.Transport.StopServerAsync();
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static void Send<T>(in T rpc, NetClient client) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.ServerSend(rpc, client);
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static void Send<T>(in T rpc, ushort clientId) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
                 if (!NetSyncModule.InternalSingleton.Transport.TryGetClient(clientId, out var client))
@@ -82,16 +98,19 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 NetSyncModule.InternalSingleton.Transport.ServerSend(rpc, client);
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static void SendToAll<T>(in T rpc) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.ServerSendToAll(rpc);
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static void SendToAllExcept<T>(in T rpc, NetClient excludedClient) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.ServerSendToAllExcept(rpc, excludedClient);
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static void SendToAllExcept<T>(in T rpc, ushort excludedClientId) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
                 if (!NetSyncModule.InternalSingleton.Transport.TryGetClient(excludedClientId, out var client))
@@ -99,6 +118,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 NetSyncModule.InternalSingleton.Transport.ServerSendToAllExcept(rpc, client);
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static void SendToAllExceptHost<T>(in T rpc) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.ServerSendToAllExceptHost(rpc);
@@ -114,12 +134,15 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 netId = NetSyncModule.InternalSingleton.NextNetworkId++
             };
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static bool IsHostClient(NetClient client) => NetSyncModule.InternalSingleton != null &&
                 NetSyncModule.InternalSingleton.Transport.IsHost(client);
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static bool IsHostClient(ushort clientId) => NetSyncModule.InternalSingleton != null &&
                 NetSyncModule.InternalSingleton.Transport.IsHost(clientId);
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static IEnumerable<NetClient> GetClientsEnumerable() {
                 NetSyncModule.ThrowIfNotLoaded();
                 return NetSyncModule.InternalSingleton.Transport.GetClientsEnumerable();
@@ -166,6 +189,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             public static void UnregisterHandler<T>(in ClientRpcHandlerDelegate<T> handler) where T : INetRpc =>
                 NetDeserializer.RpcDeserializer<T>.ClientRpcDeserializedEvent -= handler;
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static void Send<T>(in T rpc) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.ClientSend(rpc);

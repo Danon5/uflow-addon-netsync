@@ -11,6 +11,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public int TickRate { get; set; } = 60;
         public float TickDelta => 1f / TickRate;
         public int MaxRolloverTicks { get; set; } = 3;
+        public bool EnableStatistics { get; set; }
         public int Tick { get; private set; }
         public World World { get; private set; }
         internal static NetSyncModule InternalSingleton { get; private set; }

@@ -6,8 +6,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
     [ExecuteInWorld(typeof(NetWorld))]
     [ExecuteInGroup(typeof(PostTickSystemGroup))]
     [ExecuteOnServer]
-    public sealed class NetEntitySyncSystem : BaseSetIterationCallbackSystem {
-        public NetEntitySyncSystem(in World world) : base(in world, world.BuildQuery()
+    public sealed class NetEntitySyncServerSystem : BaseSetIterationCallbackSystem {
+        public NetEntitySyncServerSystem(in World world) : base(in world, world.BuildQuery()
             .With<NetSynchronize>()) { }
 
         protected override void IterateEntity(World world, in Entity entity) {
