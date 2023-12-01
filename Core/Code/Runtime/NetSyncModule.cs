@@ -16,16 +16,18 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public World World { get; private set; }
         internal static NetSyncModule InternalSingleton { get; private set; }
         internal LiteNetLibTransport Transport { get; }
-        internal NetClientAwarenessMap AwarenessMap { get; }
-        internal NetIdEntityMap EntityMap { get; }
-        internal NetClientEntityDeltaMap EntityDeltaMap { get; }
+        internal NetAwarenessMap AwarenessMap { get; }
+        internal NetEntityMap EntityMap { get; }
+        internal NetVarMap VarMap { get; }
+        internal NetDeltaMap DeltaMap { get; }
         internal ushort NextNetworkId { get; set; }
         
         public NetSyncModule() {
             Transport = new LiteNetLibTransport();
-            AwarenessMap = new NetClientAwarenessMap();
-            EntityMap = new NetIdEntityMap();
-            EntityDeltaMap = new NetClientEntityDeltaMap();
+            AwarenessMap = new NetAwarenessMap();
+            EntityMap = new NetEntityMap();
+            VarMap = new NetVarMap();
+            DeltaMap = new NetDeltaMap();
         }
 
         public override UniTask LoadDirectAsync() {
@@ -102,21 +104,26 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             World = null;
         }
 
+        private void ResetState() {
+            AwarenessMap.Clear();
+            EntityMap.Clear();
+            VarMap.Clear();
+            DeltaMap.Clear();
+        }
+
         private void OnServerStateChanged(ConnectionState state) {
             switch (state) {
                 case ConnectionState.Starting:
                     break;
                 case ConnectionState.Started:
-                    AwarenessMap.Clear();
-                    EntityMap.Clear();
+                    ResetState();
                     EnsureNetWorldCreated();
                     break;
                 case ConnectionState.Stopping:
                     break;
                 case ConnectionState.Stopped:
                     EnsureNetWorldDestroyed();
-                    AwarenessMap.Clear();
-                    EntityMap.Clear();
+                    ResetState();
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(state), state, null);
@@ -132,16 +139,14 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 case ConnectionState.Starting:
                     break;
                 case ConnectionState.Started:
-                    AwarenessMap.Clear();
-                    EntityMap.Clear();
+                    ResetState();
                     EnsureNetWorldCreated();
                     break;
                 case ConnectionState.Stopping:
                     break;
                 case ConnectionState.Stopped:
                     EnsureNetWorldDestroyed();
-                    AwarenessMap.Clear();
-                    EntityMap.Clear();
+                    ResetState();
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(state), state, null);

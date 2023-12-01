@@ -31,9 +31,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void InitializeNetVar<T>(ref NetVar<T> netVar, byte id, bool interpolate = false) {
+        public static void InitializeNetVar<T>(ref NetVar<T> netVar, ushort netId, byte varId, bool interpolate = false) {
+            NetSyncModule.ThrowIfNotLoaded();
             netVar ??= new NetVar<T>();
-            netVar.Initialize(id, interpolate);
+            netVar.Initialize(netId, varId, interpolate);
         }
 
         public static class ServerAPI {

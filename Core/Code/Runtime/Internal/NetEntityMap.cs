@@ -2,7 +2,7 @@
 using UFlow.Addon.ECS.Core.Runtime;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
-    internal sealed class NetIdEntityMap {
+    internal sealed class NetEntityMap {
         private readonly Dictionary<ushort, Entity> m_cache = new();
 
         public void Add(ushort netId, in Entity entity) => m_cache.Add(netId, entity);

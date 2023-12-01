@@ -9,12 +9,14 @@ using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     [Serializable]
-    public sealed class NetVar<T> : INetVar {
+    public sealed class NetVar<T> : INetVar, IDisposable {
         private static readonly HashSet<Type> s_validInterpolateTypes = new() {
             typeof(float)
         };
-        [ShowInInspector, ReadOnly] private byte m_id;
-        [SerializeField, PropertyOrder(-1)] private T m_value;
+        [SerializeField] private T m_value;
+        [ShowInInspector, ReadOnly] private ushort m_netId;
+        [ShowInInspector, ReadOnly] private byte m_varId;
+        [ShowInInspector, ReadOnly] private bool m_interpolate;
         private T m_lastSentValue;
         private bool m_isDirty;
 
@@ -26,15 +28,23 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 m_isDirty = !EqualityComparer<T>.Default.Equals(m_value, m_lastSentValue);
             }
         }
-        [field: ShowInInspector, ReadOnly] internal bool Interpolate { get; private set; }
+        ushort INetVar.NetId => m_netId;
+        byte INetVar.VarId => m_varId;
         bool INetVar.IsDirty => m_isDirty;
+        bool INetVar.Interpolate => m_interpolate;
         private bool IsValidInterpolateType => s_validInterpolateTypes.Contains(typeof(T));
 
-        internal void Initialize(byte id, bool interpolate) {
-            m_id = id;
-            Interpolate = interpolate && IsValidInterpolateType;
+        public void Dispose() {
+            NetSyncModule.InternalSingleton.VarMap.Remove(m_netId, this);
         }
 
+        internal void Initialize(ushort netId, byte varId, bool interpolate) {
+            m_netId = netId;
+            m_varId = varId;
+            m_interpolate = interpolate && IsValidInterpolateType;
+            NetSyncModule.InternalSingleton.VarMap.Add(netId, this);
+        }
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Set(in T value) => Value = value;
 

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
-    internal sealed class NetClientAwarenessMap {
+    internal sealed class NetAwarenessMap {
         private readonly Dictionary<ushort, HashSet<ushort>> m_map = new();
 
         public void AddClientCache(NetClient client) => m_map.Add(client.id, new HashSet<ushort>());

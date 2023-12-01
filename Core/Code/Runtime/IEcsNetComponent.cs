@@ -2,6 +2,6 @@
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     public interface IEcsNetComponent : IEcsComponent {
-        void InitializeNetVars();
+        void InitializeNetVars(ushort netId);
     }
 }
