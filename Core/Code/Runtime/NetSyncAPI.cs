@@ -30,6 +30,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             NetSyncModule.InternalSingleton.EnableStatistics = state;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void InitializeNetVar<T>(ref NetVar<T> netVar, byte id, bool interpolate = false) {
+            netVar ??= new NetVar<T>();
+            netVar.Initialize(id, interpolate);
+        }
+
         public static class ServerAPI {
             public static ConnectionState State => NetSyncModule.InternalSingleton == null
                 ? default

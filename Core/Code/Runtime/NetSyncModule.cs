@@ -18,12 +18,14 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         internal LiteNetLibTransport Transport { get; }
         internal NetClientAwarenessMap AwarenessMap { get; }
         internal NetIdEntityMap EntityMap { get; }
+        internal NetClientEntityDeltaMap EntityDeltaMap { get; }
         internal ushort NextNetworkId { get; set; }
         
         public NetSyncModule() {
             Transport = new LiteNetLibTransport();
             AwarenessMap = new NetClientAwarenessMap();
             EntityMap = new NetIdEntityMap();
+            EntityDeltaMap = new NetClientEntityDeltaMap();
         }
 
         public override UniTask LoadDirectAsync() {
