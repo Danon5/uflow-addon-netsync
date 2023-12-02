@@ -67,13 +67,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public ComponentStateMap GetComponentStateMap(ushort netId) => m_entityStateMap.Get(netId);
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ComponentStateMap GetOrCreateComponentStateMap(ushort netId) => m_entityStateMap.GetOrCreate(netId);
+        public ComponentStateMap GetOrCreate(ushort netId) => m_entityStateMap.GetOrCreate(netId);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VarStateMap GetVarStateMap(ushort netId, ushort compId) => GetComponentStateMap(netId).Get(compId);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public VarStateMap GetOrCreateVarStateMap(ushort netId, ushort compId) => GetOrCreateComponentStateMap(netId).GetOrCreate(compId);
+        public VarStateMap GetOrCreateVarStateMap(ushort netId, ushort compId) => GetOrCreate(netId).GetOrCreate(compId);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public INetVar GetVar(ushort netId, ushort compId, byte varId) => GetVarStateMap(netId, compId).Get(varId);
@@ -103,7 +103,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
         }
 
-        public abstract class BaseMap<TKey, TValue> {
+        public abstract class BaseStateMap<TKey, TValue> {
             private readonly Dictionary<TKey, TValue> m_map = new();
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -126,34 +126,35 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public virtual void Clear() => m_map.Clear();
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public IEnumerable<KeyValuePair<TKey, TValue>> AsEnumerable() => m_map;
         }
 
-        public sealed class EntityMap : BaseMap<ushort, Entity> {
-            
-        }
+        public sealed class EntityMap : BaseStateMap<ushort, Entity> { }
 
-        public sealed class EntityStateMap : BaseMap<ushort, ComponentStateMap> {
+        public sealed class EntityStateMap : BaseStateMap<ushort, ComponentStateMap> {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public ComponentStateMap GetOrCreate(ushort key) {
-                if (TryGet(key, out var value)) return value;
+                if (TryGet(key, out var value)) 
+                    return value;
                 value = new ComponentStateMap();
                 Add(key, value);
                 return value;
             }
         }
 
-        public sealed class ComponentStateMap : BaseMap<ushort, VarStateMap> {
+        public sealed class ComponentStateMap : BaseStateMap<ushort, VarStateMap> {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public VarStateMap GetOrCreate(ushort key) {
-                if (TryGet(key, out var value)) return value;
+                if (TryGet(key, out var value))
+                    return value;
                 value = new VarStateMap();
                 Add(key, value);
                 return value;
             }
         }
         
-        public sealed class VarStateMap : BaseMap<byte, INetVar> {
-            
-        }
+        public sealed class VarStateMap : BaseStateMap<byte, INetVar> { }
     }
 }

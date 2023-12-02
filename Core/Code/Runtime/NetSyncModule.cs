@@ -16,15 +16,15 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public World World { get; private set; }
         internal static NetSyncModule InternalSingleton { get; private set; }
         internal LiteNetLibTransport Transport { get; }
-        internal NetAwarenessMap AwarenessMap { get; }
+        internal NetAwarenessMap ServerAwarenessMap { get; }
         internal NetStateMaps StateMaps { get; }
-        internal UShortIdStack NetIdStack { get; }
+        internal UShortIdStack NetServerIdStack { get; }
         
         public NetSyncModule() {
             Transport = new LiteNetLibTransport();
-            AwarenessMap = new NetAwarenessMap();
+            ServerAwarenessMap = new NetAwarenessMap();
             StateMaps = new NetStateMaps();
-            NetIdStack = new UShortIdStack(1);
+            NetServerIdStack = new UShortIdStack(1);
         }
 
         public override UniTask LoadDirectAsync() {
@@ -105,9 +105,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         private void ResetState() {
-            AwarenessMap.Clear();
+            ServerAwarenessMap.Clear();
             StateMaps.Clear();
-            NetIdStack.Reset();
+            NetServerIdStack.Reset();
         }
 
         private void OnServerStateChanged(ConnectionState state) {
@@ -129,10 +129,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
         }
         
-        private void OnServerAuthorizedClient(NetClient client) => AwarenessMap.AddClientCache(client);
-        
-        private void OnServerDisconnectedClient(NetClient client) => AwarenessMap.RemoveClientCache(client);
-        
+        private void OnServerAuthorizedClient(NetClient client) {
+        }
+
+        private void OnServerDisconnectedClient(NetClient client) {
+            ServerAwarenessMap.GetEntityAwarenessMap().RemoveClient(client);
+        }
+
         private void OnClientStateChanged(ConnectionState state) {
             switch (state) {
                 case ConnectionState.Starting:

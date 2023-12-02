@@ -1,33 +1,64 @@
 ﻿using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     internal sealed class NetAwarenessMap {
-        private readonly Dictionary<ushort, HashSet<ushort>> m_map = new();
+        private readonly EntityAwarenessMap m_entityAwarenessMap = new();
 
-        public void AddClientCache(NetClient client) => m_map.Add(client.id, new HashSet<ushort>());
+        public EntityAwarenessMap GetEntityAwarenessMap() => m_entityAwarenessMap;
         
-        public void AddClientCache(ushort clientId) => m_map.Add(clientId, new HashSet<ushort>());
+        public void Clear() => m_entityAwarenessMap.Clear();
 
-        public void RemoveClientCache(NetClient client) => m_map.Remove(client.id);
-        
-        public void RemoveClientCache(ushort clientId) => m_map.Remove(clientId);
+        public abstract class BaseAwarenessMap<TValue> {
+            private readonly Dictionary<ushort, HashSet<TValue>> m_map = new();
 
-        public void Clear() => m_map.Clear();
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public virtual void MakeClientAwareOf(ushort clientId, TValue value) {
+                if (!m_map.TryGetValue(clientId, out var set)) {
+                    set = new HashSet<TValue>();
+                    m_map.Add(clientId, set);
+                }
+                set.Add(value);
+            }
 
-        public IEnumerable<ushort> GetIdsClientIsAwareOfEnumerable(NetClient client) => m_map[client.id];
-        
-        public IEnumerable<ushort> GetIdsClientIsAwareOfEnumerable(ushort clientId) => m_map[clientId];
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public virtual void MakeClientAwareOf(NetClient client, TValue value) =>
+                MakeClientAwareOf(client.id, value); 
+            
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public virtual void MakeClientUnawareOf(ushort clientId, TValue value) {
+                if (!m_map.TryGetValue(clientId, out var set))
+                    return;
+                set.Remove(value);
+            }
 
-        public bool ClientIsAwareOf(NetClient client, ushort id) => m_map[client.id].Contains(id);
-        
-        public bool ClientIsAwareOf(ushort clientId, ushort id) => m_map[clientId].Contains(id);
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public virtual void MakeClientUnawareOf(NetClient client, TValue value) => 
+                MakeClientAwareOf(client.id, value);
 
-        public void MarkClientAware(NetClient client, ushort id) => m_map[client.id].Add(id);
-        
-        public void MarkClientAware(ushort clientId, ushort id) => m_map[clientId].Add(id);
-        
-        public void MarkClientUnaware(NetClient client, ushort id) => m_map[client.id].Remove(id);
-        
-        public void MarkClientUnaware(ushort clientId, ushort id) => m_map[clientId].Remove(id);
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public virtual bool ClientIsAwareOf(ushort clientId, TValue value) =>
+                m_map.TryGetValue(clientId, out var set) && set.Contains(value);
+            
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public virtual bool ClientIsAwareOf(NetClient client, TValue value) => 
+                ClientIsAwareOf(client.id, value);
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public virtual void RemoveClient(ushort clientId) =>
+                m_map.Remove(clientId);
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public virtual void RemoveClient(NetClient client) => 
+                RemoveClient(client.id);
+            
+            public virtual void Clear() => m_map.Clear();
+
+            public IEnumerable<TValue> AsEnumerable(ushort clientId) => m_map[clientId];
+        }
+
+        public sealed class EntityAwarenessMap : BaseAwarenessMap<ushort> {
+            
+        }
     }
 }
