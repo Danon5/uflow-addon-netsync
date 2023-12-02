@@ -56,7 +56,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             var type = m_hashToTypeMap[hash];
             m_idToTypeMap[id] = type;
             m_typeToIdMap[type] = id;
-            Debug.Log($"{typeof(T).Name}: Registering {GetTypeFromNetworkId(id).Name} as {hash} - {id}");
+#if UFLOW_DEBUG_ENABLED
+            Debug.Log($"Registered {typeof(T).Name}. Type: {GetTypeFromNetworkId(id).Name}, Hash: {hash}, Id: {id}");
+#endif
         }
         
         private void RegisterLocalType(Type type) {

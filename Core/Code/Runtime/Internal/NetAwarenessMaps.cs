@@ -7,16 +7,62 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool ClientIsAwareOf(ushort clientId, ushort netId) =>
-            m_entityAwarenessMaps.TryGetValue(clientId, out var entityAwarenessMap) && entityAwarenessMap.ClientIsAwareOf(netId);
+            m_entityAwarenessMaps.TryGetValue(clientId, out var entityAwarenessMap) && 
+            entityAwarenessMap.ClientIsAwareOf(netId);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void MakeClientAwareOf(ushort clientId, ushort netId) =>
-            GetOrCreateEntityAwarenessMap(clientId).MakeClientAwareOf(netId);
+            GetOrCreateEntityAwarenessMap(clientId)
+                .MakeClientAwareOf(netId);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void MakeClientUnawareOf(ushort clientId, ushort netId) {
             if (!m_entityAwarenessMaps.TryGetValue(clientId, out var entityAwarenessMap)) return;
             entityAwarenessMap.MakeClientUnawareOf(netId);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool ClientIsAwareOf(ushort clientId, ushort netId, ushort compId) =>
+            m_entityAwarenessMaps.TryGetValue(clientId, out var entityAwarenessMap) && 
+            entityAwarenessMap.ClientIsAwareOf(netId) &&
+            entityAwarenessMap.TryGetComponentAwarenessMap(netId, out var componentAwarenessMap) &&
+            componentAwarenessMap.ClientIsAwareOf(compId);
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void MakeClientAwareOf(ushort clientId, ushort netId, ushort compId) => 
+            GetOrCreateEntityAwarenessMap(clientId)
+                .GetOrCreateComponentAwarenessMap(netId)
+                .MakeClientAwareOf(compId);
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void MakeClientUnawareOf(ushort clientId, ushort netId, ushort compId) {
+            if (!m_entityAwarenessMaps.TryGetValue(clientId, out var entityAwarenessMap)) return;
+            if (!entityAwarenessMap.TryGetComponentAwarenessMap(netId, out var componentAwarenessMap)) return;
+            componentAwarenessMap.MakeClientUnawareOf(compId);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool ClientIsAwareOf(ushort clientId, ushort netId, ushort compId, byte varId) =>
+            m_entityAwarenessMaps.TryGetValue(clientId, out var entityAwarenessMap) && 
+            entityAwarenessMap.ClientIsAwareOf(netId) &&
+            entityAwarenessMap.TryGetComponentAwarenessMap(netId, out var componentAwarenessMap) &&
+            componentAwarenessMap.ClientIsAwareOf(compId) &&
+            componentAwarenessMap.TryGetVarAwarenessMap(compId, out var varAwarenessMap) &&
+            varAwarenessMap.ClientIsAwareOf(varId);
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void MakeClientAwareOf(ushort clientId, ushort netId, ushort compId, byte varId) => 
+            GetOrCreateEntityAwarenessMap(clientId)
+                .GetOrCreateComponentAwarenessMap(netId)
+                .GetOrCreateVarAwarenessMap(compId)
+                .MakeClientAwareOf(varId);
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void MakeClientUnawareOf(ushort clientId, ushort netId, ushort compId, byte varId) {
+            if (!m_entityAwarenessMaps.TryGetValue(clientId, out var entityAwarenessMap)) return;
+            if (!entityAwarenessMap.TryGetComponentAwarenessMap(netId, out var componentAwarenessMap)) return;
+            if (!componentAwarenessMap.TryGetVarAwarenessMap(compId, out var varAwarenessMap)) return;
+            varAwarenessMap.MakeClientUnawareOf(varId);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

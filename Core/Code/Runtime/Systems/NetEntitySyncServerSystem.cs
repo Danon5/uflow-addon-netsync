@@ -73,8 +73,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         private static void SyncComponentsToClient(NetClient client, in Entity entity) {
             ref var netSynchronize = ref entity.Get<NetSynchronize>();
             var netId = netSynchronize.netId;
-            foreach (var (compId, varStateMap) in NetSyncModule.InternalSingleton.StateMaps.GetComponentStateMap(netId).AsEnumerable()) {
-                
+            if (NetSyncModule.InternalSingleton.StateMaps.TryGetComponentStateMap(netId, out var componentStateMap)) return;
+            foreach (var (compId, varStateMap) in componentStateMap.AsEnumerable()) {
                 foreach (var (varId, netVar) in varStateMap.AsEnumerable()) {
                     
                 }

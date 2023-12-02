@@ -1,6 +1,5 @@
 ﻿using System;
 using UFlow.Addon.ECS.Core.Runtime;
-using UnityEngine;
 using UnityEngine.Scripting;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
@@ -23,12 +22,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         private static void OnNetSynchronizeAdded(in Entity entity, ref NetSynchronize component) {
-            Debug.Log($"Adding {component.netId}");
             NetSyncModule.InternalSingleton.StateMaps.GetEntityMap().Add(component.netId, entity);
         }
 
         private static void OnNetSynchronizeRemoved(in Entity entity, in NetSynchronize component) {
-            Debug.Log($"Removing {component.netId}");
             NetSyncModule.InternalSingleton.StateMaps.GetEntityMap().Remove(component.netId);
             NetSyncModule.InternalSingleton.StateMaps.GetEntityStateMap().Remove(component.netId);
             if (NetSyncAPI.IsServer)

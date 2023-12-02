@@ -94,7 +94,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
             ServerState = ConnectionState.Started;
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log($"Server started on port {port}.");
+            Debug.Log($"Server started. Port: {port}");
 #endif
         }
 
@@ -121,7 +121,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
             ClientState = ConnectionState.Started;
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log($"Client started with ip {ip} on port {port}.");
+            Debug.Log($"Client started. IP: {ip}, Port: {port}");
 #endif
         }
 
@@ -226,7 +226,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (m_clients.Count == 0) return;
             if (TryGetHostClient(out var hostClient) && client.id == hostClient.id) {
 #if UFLOW_DEBUG_ENABLED
-                Debug.Log("Client received packet.");
+                Debug.Log("Host emulating RPC.");
 #endif
                 NetDeserializer.RpcDeserializer<T>.InvokeClientRpcDeserializedDirect(rpc);
                 return;
@@ -243,7 +243,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (m_clients.Count == 0) return;
             if (HostStartingOrStarted) {
 #if UFLOW_DEBUG_ENABLED
-                Debug.Log("Client received packet.");
+                Debug.Log("Host emulating RPC.");
 #endif
                 NetDeserializer.RpcDeserializer<T>.InvokeClientRpcDeserializedDirect(rpc);
             }
@@ -260,7 +260,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (m_clients.Count == 0) return;
             if (TryGetHostClient(out var hostClient) && excludedClient.id != hostClient.id) {
 #if UFLOW_DEBUG_ENABLED
-                Debug.Log("Client received packet.");
+                Debug.Log("Host emulating RPC.");
 #endif
                 NetDeserializer.RpcDeserializer<T>.InvokeClientRpcDeserializedDirect(rpc);
             }
@@ -285,7 +285,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 return;
             }
             if (ServerPeer.ConnectionState != LiteNetLib.ConnectionState.Connected)
-                throw new Exception("Cannot send rpc when not connected.");
+                throw new Exception("Cannot send RPC when not connected.");
             BeginWrite(NetPacketType.RPC);
             NetSerializer.SerializeRpc(Buffer, rpc);
             EndWrite();
@@ -301,7 +301,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         public void ServerAuthorizePeer(NetPeer peer) {
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log($"Authorized peer {peer.Id}.");
+            Debug.Log($"Authorized peer. ID: {peer.Id}");
 #endif
             var client = new NetClient((ushort)peer.Id);
             m_clients.Add((ushort)peer.Id, client);
@@ -404,7 +404,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             await UniTask.WaitUntil(() => m_client.IsRunning).Timeout(s_timeout);
 #if UFLOW_DEBUG_ENABLED
             if (ServerPeer == null)
-                Debug.LogWarning($"Connection failed to ip {ip} on port {port}.");
+                Debug.LogWarning($"Connection failed. IP: {ip}, Port: {port}");
 #endif
             return ServerPeer != null;
         }
@@ -427,7 +427,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         private void ServerOnPeerConnected(NetPeer peer) {
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log($"Peer {peer.Id} connected.");
+            Debug.Log($"Peer connected. ID: {peer.Id}");
 #endif
             if (IsHost((ushort)peer.Id)) return;
             m_peers.Add((ushort)peer.Id, peer);
@@ -439,7 +439,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         
         private void ServerOnPeerDisconnected(NetPeer peer, DisconnectInfo info) {
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log($"Peer {peer.Id} disconnected: {info.Reason}.");
+            Debug.Log($"Peer disconnected. ID: {peer.Id}, Reason: {info.Reason}");
 #endif
             var peerId = (ushort)peer.Id;
             m_peers.Remove(peerId);
@@ -449,10 +449,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         private void ServerOnReceive(NetPeer peer, NetPacketReader reader, byte channel, DeliveryMethod deliveryMethod) {
-#if UFLOW_DEBUG_ENABLED
-            Debug.Log("Server received packet.");
-#endif
             BeginRead(reader, out var packetType);
+#if UFLOW_DEBUG_ENABLED
+            Debug.Log($"Server received packet. Type: {packetType}");
+#endif
             NetDeserializer.Deserialize(Buffer, packetType, peer);
             EndRead(reader);
         }
@@ -467,15 +467,15 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             NetTypeIdMaps.RpcMap.ClearNetworkCaches();
             NetTypeIdMaps.ComponentMap.ClearNetworkCaches();
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log($"Disconnected: {info.Reason}.");
+            Debug.Log($"Disconnected. Reason: {info.Reason}");
 #endif
         }
 
         private void ClientOnReceive(NetPeer peer, NetPacketReader reader, byte channel, DeliveryMethod deliveryMethod) {
-#if UFLOW_DEBUG_ENABLED
-            Debug.Log("Client received packet.");
-#endif
             BeginRead(reader, out var packetType);
+#if UFLOW_DEBUG_ENABLED
+            Debug.Log($"Client received packet. Type: {packetType}");
+#endif
             NetDeserializer.Deserialize(Buffer, packetType, peer);
             EndRead(reader);
         }
