@@ -9,6 +9,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public static bool IsServer => ServerAPI.StartingOrStarted;
         public static bool IsClient => ClientAPI.StartingOrStarted;
         public static bool IsHost => HostAPI.StartingOrStarted;
+        public static bool NetworkInitialized => ServerAPI.State == ConnectionState.Started || ClientAPI.State == ConnectionState.Started;
         public static bool OfflineMode => NetSyncModule.InternalSingleton != null &&
             NetSyncModule.InternalSingleton.Transport.OfflineMode;
         
@@ -162,6 +163,16 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 NetSyncModule.InternalSingleton.Transport.ClientStateChangedEvent -= action;
             }
 
+            public static void SubscribeDisconnected(Action<DisconnectionType> action) {
+                NetSyncModule.ThrowIfNotLoaded();
+                NetSyncModule.InternalSingleton.Transport.ClientDisconnectedEvent += action;
+            }
+
+            public static void UnsubscribeDisconnected(Action<DisconnectionType> action) {
+                NetSyncModule.ThrowIfNotLoaded();
+                NetSyncModule.InternalSingleton.Transport.ClientDisconnectedEvent -= action;
+            }
+            
             public static UniTask StartClientAsync() {
                 NetSyncModule.ThrowIfNotLoaded();
                 return NetSyncModule.InternalSingleton.Transport.StartClientAsync();

@@ -29,9 +29,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         public override UniTask LoadDirectAsync() {
             InternalSingleton = this;
-            Transport.ServerStateChangedEvent += OnServerStateChanged;
-            Transport.ServerClientDisconnectedEvent += OnServerDisconnectedClient;
-            Transport.ClientStateChangedEvent += OnClientStateChanged;
+            Transport.ServerStateChangedEvent += ServerOnStateChanged;
+            Transport.ServerClientDisconnectedEvent += ServerOnDisconnectedClient;
+            Transport.ClientStateChangedEvent += ClientOnStateChanged;
             return base.LoadDirectAsync();
         }
 
@@ -43,16 +43,16 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             else if (Transport.ClientStartingOrStarted)
                 await Transport.StopClientAsync();
             Transport.ForceStop();
-            Transport.ServerStateChangedEvent -= OnServerStateChanged;
-            Transport.ServerClientDisconnectedEvent -= OnServerDisconnectedClient;
-            Transport.ClientStateChangedEvent -= OnClientStateChanged;
+            Transport.ServerStateChangedEvent -= ServerOnStateChanged;
+            Transport.ServerClientDisconnectedEvent -= ServerOnDisconnectedClient;
+            Transport.ClientStateChangedEvent -= ClientOnStateChanged;
             StateMaps.DisposeSubscriptions();
             EnsureNetWorldDestroyed();
             InternalSingleton = null;
         }
 
         public override void Update() {
-            if (!Transport.ServerStartingOrStarted && !Transport.ClientStartingOrStarted) return;
+            if (!NetSyncAPI.NetworkInitialized) return;
             if (World == null) return;
            EnsurePhysicsSimulationSettings();
             m_tickRolloverDelta += Time.deltaTime;
@@ -60,10 +60,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             while (m_tickRolloverDelta >= TickDelta) {
                 m_tickRolloverDelta -= TickDelta;
                 if (ticksExecuted > MaxRolloverTicks) continue;
-                World.RunSystemGroup<PreTickSystemGroup>();
-                World.RunSystemGroup<TickSystemGroup>();
+                World?.RunSystemGroup<PreTickSystemGroup>();
+                World?.RunSystemGroup<TickSystemGroup>();
                 Physics.Simulate(TickDelta);
-                World.RunSystemGroup<PostTickSystemGroup>();
+                World?.RunSystemGroup<PostTickSystemGroup>();
                 ticksExecuted++;
                 Tick++;
             }
@@ -98,7 +98,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         
         private void EnsureNetWorldDestroyed() {
             StateMaps.DisposeSubscriptions();
-            EcsModule<NetWorld>.EnsureUnloaded();
+            EcsModule<NetWorld>.EnqueueEnsureUnloaded();
             World = null;
         }
 
@@ -108,7 +108,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             NetServerIdStack.Reset();
         }
 
-        private void OnServerStateChanged(ConnectionState state) {
+        private void ServerOnStateChanged(ConnectionState state) {
             switch (state) {
                 case ConnectionState.Starting:
                     ResetState();
@@ -127,9 +127,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
         }
 
-        private void OnServerDisconnectedClient(NetClient client) => ServerAwarenessMaps.RemoveClientMaps(client);
+        private void ServerOnDisconnectedClient(NetClient client) => ServerAwarenessMaps.RemoveClientMaps(client);
 
-        private void OnClientStateChanged(ConnectionState state) {
+        private void ClientOnStateChanged(ConnectionState state) {
             switch (state) {
                 case ConnectionState.Starting:
                     ResetState();

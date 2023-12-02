@@ -117,6 +117,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             [Preserve]
             public static void OnEntityComponentAdded(in Entity entity, ref T component) {
                 NetSyncModule.ThrowIfNotLoaded();
+                if (!NetSyncAPI.NetworkInitialized) return;
                 if (!entity.TryGet(out NetSynchronize netSynchronize)) return;
                 var netId = netSynchronize.netId;
                 var compId = NetTypeIdMaps.ComponentMap.GetNetworkIdFromType(typeof(T));
@@ -126,6 +127,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             [Preserve]
             public static void OnEntityComponentRemoved(in Entity entity, in T component) {
                 NetSyncModule.ThrowIfNotLoaded();
+                if (!NetSyncAPI.NetworkInitialized) return;
                 if (!entity.TryGet(out NetSynchronize netSynchronize)) return;
                 var netId = netSynchronize.netId;
                 var compId = NetTypeIdMaps.ComponentMap.GetNetworkIdFromType(typeof(T));

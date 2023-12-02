@@ -13,7 +13,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public event Action<ConnectionState> ClientStateChangedEvent;
         public event Action<ConnectionState> HostStateChangedEvent;
         public event Action<NetClient> ServerClientAuthorizedEvent;
-        public event Action<NetClient> ServerClientDisconnectedEvent; 
+        public event Action<NetClient> ServerClientDisconnectedEvent;
+        public event Action<DisconnectionType> ClientDisconnectedEvent; 
         private const string c_default_ip = "localhost";
         private const ushort c_default_port = 7777;
         private static readonly TimeSpan s_timeout = TimeSpan.FromSeconds(5);
@@ -477,11 +478,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
         
         private void ClientOnDisconnected(NetPeer peer, DisconnectInfo info) {
-            NetTypeIdMaps.RpcMap.ClearNetworkCaches();
-            NetTypeIdMaps.ComponentMap.ClearNetworkCaches();
 #if UFLOW_DEBUG_ENABLED
             Debug.Log($"Disconnected. Reason: {info.Reason}");
 #endif
+            if (!ClientStartingOrStarted) return;
+            StopClientAsync().Forget();
+            ClientDisconnectedEvent?.Invoke((DisconnectionType)info.Reason);
         }
 
         private void ClientOnReceive(NetPeer peer, NetPacketReader reader, byte channel, DeliveryMethod deliveryMethod) {
