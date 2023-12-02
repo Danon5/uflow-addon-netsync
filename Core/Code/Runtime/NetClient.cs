@@ -7,5 +7,7 @@
         }
 
         public override int GetHashCode() => id;
+
+        public static implicit operator ushort(NetClient client) => client.id;
     }
 }

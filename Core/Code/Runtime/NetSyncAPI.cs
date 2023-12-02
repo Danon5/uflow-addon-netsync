@@ -92,12 +92,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static void Send<T>(in T rpc, NetClient client) where T : INetRpc {
-                NetSyncModule.ThrowIfNotLoaded();
-                NetSyncModule.InternalSingleton.Transport.ServerSend(rpc, client);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static void Send<T>(in T rpc, ushort clientId) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
                 if (!NetSyncModule.InternalSingleton.Transport.TryGetClient(clientId, out var client))
@@ -109,12 +103,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             public static void SendToAll<T>(in T rpc) where T : INetRpc {
                 NetSyncModule.ThrowIfNotLoaded();
                 NetSyncModule.InternalSingleton.Transport.ServerSendToAll(rpc);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static void SendToAllExcept<T>(in T rpc, NetClient excludedClient) where T : INetRpc {
-                NetSyncModule.ThrowIfNotLoaded();
-                NetSyncModule.InternalSingleton.Transport.ServerSendToAllExcept(rpc, excludedClient);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -143,10 +131,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
             public static void RecycleNetSynchronizeComponent(in NetSynchronize netSynchronize) =>
                 NetSyncModule.InternalSingleton.NetServerIdStack.RecycleId(netSynchronize.netId);
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static bool IsHostClient(NetClient client) => NetSyncModule.InternalSingleton != null &&
-                NetSyncModule.InternalSingleton.Transport.IsHost(client);
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static bool IsHostClient(ushort clientId) => NetSyncModule.InternalSingleton != null &&

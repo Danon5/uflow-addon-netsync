@@ -214,9 +214,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public bool TryGetClient(ushort id, out NetClient client) => m_clients.TryGetValue(id, out client);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool IsHost(NetClient client) => HostStartingOrStarted && client.id == 0;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsHost(ushort clientId) => HostStartingOrStarted && clientId == 0;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

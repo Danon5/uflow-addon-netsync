@@ -13,20 +13,20 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         protected override void IterateEntity(World world, in Entity entity) {
             ref var netSynchronize = ref entity.Get<NetSynchronize>();
             var netSyncModule = NetSyncModule.InternalSingleton;
-            var entityAwarenessMap = netSyncModule.ServerAwarenessMap.GetEntityAwarenessMap();
+            var awarenessMaps = netSyncModule.ServerAwarenessMaps;
             foreach (var client in NetSyncAPI.ServerAPI.GetClientsEnumerable()) {
                 if (NetSyncAPI.ServerAPI.IsHostClient(client)) continue;
                 if (ClientShouldBeAwareOf(client, netSynchronize.netId)) {
-                    if (!entityAwarenessMap.ClientIsAwareOf(client, netSynchronize.netId)) {
+                    if (!awarenessMaps.ClientIsAwareOf(client, netSynchronize.netId)) {
                         SendCreateEntityPacketToClient(client, entity);
-                        entityAwarenessMap.MakeClientAwareOf(client, netSynchronize.netId);
+                        awarenessMaps.MakeClientAwareOf(client, netSynchronize.netId);
                     }
                     SyncComponentsToClient(client, entity);
                 }
                 else {
-                    if (!entityAwarenessMap.ClientIsAwareOf(client, netSynchronize.netId)) continue;
+                    if (!awarenessMaps.ClientIsAwareOf(client, netSynchronize.netId)) continue;
                     SendDestroyEntityPacketToClient(client, entity);
-                    entityAwarenessMap.MakeClientUnawareOf(client, netSynchronize.netId);
+                    awarenessMaps.MakeClientUnawareOf(client, netSynchronize.netId);
                 }
             }
         }
@@ -34,12 +34,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         protected override void EntityRemoved(World world, in Entity entity) {
             ref var netSynchronize = ref entity.Get<NetSynchronize>();
             var netSyncModule = NetSyncModule.InternalSingleton;
-            var entityAwarenessMap = netSyncModule.ServerAwarenessMap.GetEntityAwarenessMap();
+            var awarenessMaps = netSyncModule.ServerAwarenessMaps;
             foreach (var client in NetSyncAPI.ServerAPI.GetClientsEnumerable()) {
                 if (NetSyncAPI.ServerAPI.IsHostClient(client)) continue;
-                if (!entityAwarenessMap.ClientIsAwareOf(client, netSynchronize.netId)) continue;
+                if (!awarenessMaps.ClientIsAwareOf(client, netSynchronize.netId)) continue;
                 SendDestroyEntityPacketToClient(client, entity);
-                entityAwarenessMap.MakeClientUnawareOf(client, netSynchronize.netId);
+                awarenessMaps.MakeClientUnawareOf(client, netSynchronize.netId);
             }
         }
 

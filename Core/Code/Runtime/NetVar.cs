@@ -35,13 +35,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         bool INetVar.Interpolate => m_interpolate;
         private bool IsValidInterpolateType => s_validInterpolateTypes.Contains(typeof(T));
 
-        internal void Initialize(ushort netId, ushort compId, byte varId, bool interpolate) {
-            m_netId = netId;
-            m_varId = varId;
-            m_interpolate = interpolate && IsValidInterpolateType;
-            NetSyncModule.InternalSingleton.StateMaps.GetOrCreateVarStateMap(netId, compId).Add(varId, this);
-        }
-        
+        public static implicit operator T(NetVar<T> netVar) => netVar.Value; 
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Set(in T value) => Value = value;
 
@@ -53,6 +48,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void INetVar.Deserialize(ByteBuffer buffer) => SerializationAPI.DeserializeInto(buffer, ref m_value); 
+        
+        internal void Initialize(ushort netId, ushort compId, byte varId, bool interpolate) {
+            m_netId = netId;
+            m_varId = varId;
+            m_interpolate = interpolate && IsValidInterpolateType;
+            NetSyncModule.InternalSingleton.StateMaps.GetOrCreateVarStateMap(netId, compId).Add(varId, this);
+        }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void UpdateLastSentValue() => m_lastSentValue = m_value;

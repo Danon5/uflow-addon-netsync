@@ -16,13 +16,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public World World { get; private set; }
         internal static NetSyncModule InternalSingleton { get; private set; }
         internal LiteNetLibTransport Transport { get; }
-        internal NetAwarenessMap ServerAwarenessMap { get; }
+        internal NetAwarenessMaps ServerAwarenessMaps { get; }
         internal NetStateMaps StateMaps { get; }
         internal UShortIdStack NetServerIdStack { get; }
         
         public NetSyncModule() {
             Transport = new LiteNetLibTransport();
-            ServerAwarenessMap = new NetAwarenessMap();
+            ServerAwarenessMaps = new NetAwarenessMaps();
             StateMaps = new NetStateMaps();
             NetServerIdStack = new UShortIdStack(1);
         }
@@ -30,7 +30,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public override UniTask LoadDirectAsync() {
             InternalSingleton = this;
             Transport.ServerStateChangedEvent += OnServerStateChanged;
-            Transport.ServerClientAuthorizedEvent += OnServerAuthorizedClient;
             Transport.ServerClientDisconnectedEvent += OnServerDisconnectedClient;
             Transport.ClientStateChangedEvent += OnClientStateChanged;
             return base.LoadDirectAsync();
@@ -45,7 +44,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 await Transport.StopClientAsync();
             Transport.ForceStop();
             Transport.ServerStateChangedEvent -= OnServerStateChanged;
-            Transport.ServerClientAuthorizedEvent -= OnServerAuthorizedClient;
             Transport.ServerClientDisconnectedEvent -= OnServerDisconnectedClient;
             Transport.ClientStateChangedEvent -= OnClientStateChanged;
             StateMaps.DisposeSubscriptions();
@@ -105,7 +103,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         private void ResetState() {
-            ServerAwarenessMap.Clear();
+            ServerAwarenessMaps.Clear();
             StateMaps.Clear();
             NetServerIdStack.Reset();
         }
@@ -128,13 +126,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                     throw new ArgumentOutOfRangeException(nameof(state), state, null);
             }
         }
-        
-        private void OnServerAuthorizedClient(NetClient client) {
-        }
 
-        private void OnServerDisconnectedClient(NetClient client) {
-            ServerAwarenessMap.GetEntityAwarenessMap().RemoveClient(client);
-        }
+        private void OnServerDisconnectedClient(NetClient client) => ServerAwarenessMaps.RemoveClientMaps(client);
 
         private void OnClientStateChanged(ConnectionState state) {
             switch (state) {
