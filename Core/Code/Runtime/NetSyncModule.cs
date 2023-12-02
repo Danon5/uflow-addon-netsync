@@ -18,12 +18,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         internal LiteNetLibTransport Transport { get; }
         internal NetAwarenessMap AwarenessMap { get; }
         internal NetStateMaps StateMaps { get; }
-        internal ushort NextNetworkId { get; set; }
+        internal UShortIdStack NetIdStack { get; }
         
         public NetSyncModule() {
             Transport = new LiteNetLibTransport();
             AwarenessMap = new NetAwarenessMap();
             StateMaps = new NetStateMaps();
+            NetIdStack = new UShortIdStack(1);
         }
 
         public override UniTask LoadDirectAsync() {
@@ -106,6 +107,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         private void ResetState() {
             AwarenessMap.Clear();
             StateMaps.Clear();
+            NetIdStack.Reset();
         }
 
         private void OnServerStateChanged(ConnectionState state) {

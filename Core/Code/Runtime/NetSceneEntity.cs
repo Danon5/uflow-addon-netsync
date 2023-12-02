@@ -9,7 +9,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         protected override void AddSpecialComponentsBeforeBaking() {
             base.AddSpecialComponentsBeforeBaking();
             if (!NetSyncAPI.IsServer) return;
-            Entity.Set(NetSyncAPI.ServerAPI.GetNextValidNetSynchronizeComponent());
+            Entity.Set(NetSyncAPI.ServerAPI.GetNextNetSynchronizeComponent());
         }
     }
 }

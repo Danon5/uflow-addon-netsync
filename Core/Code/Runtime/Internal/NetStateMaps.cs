@@ -107,25 +107,25 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             private readonly Dictionary<TKey, TValue> m_map = new();
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Add(TKey key, TValue value) => m_map.Add(key, value);
+            public virtual void Add(TKey key, TValue value) => m_map.Add(key, value);
             
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool TryAdd(TKey key, TValue value) => m_map.TryAdd(key, value);
+            public virtual bool TryAdd(TKey key, TValue value) => m_map.TryAdd(key, value);
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public TValue Get(TKey key) => m_map[key];
+            public virtual TValue Get(TKey key) => m_map[key];
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool TryGet(TKey key, out TValue value) => m_map.TryGetValue(key, out value);
+            public virtual bool TryGet(TKey key, out TValue value) => m_map.TryGetValue(key, out value);
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool Remove(TKey key) => m_map.Remove(key);
+            public virtual bool Remove(TKey key) => m_map.Remove(key);
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool ContainsKey(TKey key) => m_map.ContainsKey(key);
+            public virtual bool ContainsKey(TKey key) => m_map.ContainsKey(key);
             
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Clear() => m_map.Clear();
+            public virtual void Clear() => m_map.Clear();
         }
 
         public sealed class EntityMap : BaseMap<ushort, Entity> {

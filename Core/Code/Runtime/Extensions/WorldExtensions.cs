@@ -10,7 +10,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (!NetSyncAPI.IsServer)
                 throw new Exception("Attempting to create network entity when server is not started.");
             var entity = world.CreateEntity(enabled);
-            entity.Set(NetSyncAPI.ServerAPI.GetNextValidNetSynchronizeComponent());
+            entity.Set(NetSyncAPI.ServerAPI.GetNextNetSynchronizeComponent());
             return entity;
         }
     }

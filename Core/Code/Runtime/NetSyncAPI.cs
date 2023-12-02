@@ -137,9 +137,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             public static void UnregisterHandler<T>(in ServerRpcHandlerDelegate<T> handler) where T : INetRpc =>
                 NetDeserializer.RpcDeserializer<T>.ServerRpcDeserializedEvent -= handler;
 
-            public static NetSynchronize GetNextValidNetSynchronizeComponent() => new() {
-                netId = NetSyncModule.InternalSingleton.NextNetworkId++
+            public static NetSynchronize GetNextNetSynchronizeComponent() => new() {
+                netId = NetSyncModule.InternalSingleton.NetIdStack.GetNextId()
             };
+
+            public static void RecycleNetSynchronizeComponent(in NetSynchronize netSynchronize) =>
+                NetSyncModule.InternalSingleton.NetIdStack.RecycleId(netSynchronize.netId);
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static bool IsHostClient(NetClient client) => NetSyncModule.InternalSingleton != null &&
