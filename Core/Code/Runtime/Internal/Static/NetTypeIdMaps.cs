@@ -8,8 +8,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         static NetTypeIdMaps() => UnityGlobalEventHelper.RuntimeInitializeOnLoad += ClearStaticCache;
 
         private static void ClearStaticCache() {
-            RpcMap.ClearNetworkCaches();
-            ComponentMap.ClearNetworkCaches();
+            RpcMap.ClearAllCaches();
+            ComponentMap.ClearAllCaches();
         }
     }
 }

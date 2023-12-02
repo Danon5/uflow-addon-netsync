@@ -110,9 +110,11 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             var netId = buffer.ReadUShort();
             var prefabId = buffer.ReadUShort();
             if (NetSyncModule.InternalSingleton == null) return;
-            NetSyncPrefabCache.Get().GetPrefabFromNetworkId(prefabId).Instantiate().AsEntity().Set(new NetSynchronize {
+            var entity = NetSyncPrefabCache.Get().GetPrefabFromNetworkId(prefabId).Instantiate().AsEntity(true);
+            entity.Set(new NetSynchronize {
                 netId = netId
             });
+            entity.Get<SceneEntityRef>().value.BakeAndFinalize();
             Debug.Log($"Created scene entity with netId {netId} on client.");
         }
         

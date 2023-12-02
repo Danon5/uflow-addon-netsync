@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UFlow.Addon.Serialization.Core.Runtime;
 using UFlow.Core.Runtime;
+using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     internal sealed class GenericNetTypeIdMap<T> {
@@ -31,6 +32,14 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             foreach (var (type, id) in m_typeToIdMap)
                 yield return (m_typeToHashMap[type], id);
         }
+        
+        public void ClearAllCaches() {
+            m_hashToTypeMap.Clear();
+            m_typeToHashMap.Clear();
+            m_idToTypeMap.Clear();
+            m_typeToIdMap.Clear();
+            m_locallyInitialized = false;
+        }
 
         public void ClearNetworkCaches() {
             m_idToTypeMap.Clear();
@@ -47,20 +56,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             var type = m_hashToTypeMap[hash];
             m_idToTypeMap[id] = type;
             m_typeToIdMap[type] = id;
+            Debug.Log($"{typeof(T).Name}: Registering {GetTypeFromNetworkId(id).Name} as {hash} - {id}");
         }
         
         private void RegisterLocalType(Type type) {
             var hash = SerializationAPI.CalculateHash(type.Name);
             m_hashToTypeMap[hash] = type;
             m_typeToHashMap[type] = hash;
-        }
-
-        private void Clear() {
-            m_hashToTypeMap.Clear();
-            m_typeToHashMap.Clear();
-            m_idToTypeMap.Clear();
-            m_typeToIdMap.Clear();
-            m_locallyInitialized = false;
         }
     }
 }

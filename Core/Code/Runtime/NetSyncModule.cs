@@ -111,15 +111,15 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         private void OnServerStateChanged(ConnectionState state) {
             switch (state) {
                 case ConnectionState.Starting:
+                    ResetState();
                     break;
                 case ConnectionState.Started:
-                    ResetState();
                     EnsureNetWorldCreated();
                     break;
                 case ConnectionState.Stopping:
+                    EnsureNetWorldDestroyed();
                     break;
                 case ConnectionState.Stopped:
-                    EnsureNetWorldDestroyed();
                     ResetState();
                     break;
                 default:
@@ -134,15 +134,15 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         private void OnClientStateChanged(ConnectionState state) {
             switch (state) {
                 case ConnectionState.Starting:
+                    ResetState();
                     break;
                 case ConnectionState.Started:
-                    ResetState();
                     EnsureNetWorldCreated();
                     break;
                 case ConnectionState.Stopping:
+                    EnsureNetWorldDestroyed();
                     break;
                 case ConnectionState.Stopped:
-                    EnsureNetWorldDestroyed();
                     ResetState();
                     break;
                 default:

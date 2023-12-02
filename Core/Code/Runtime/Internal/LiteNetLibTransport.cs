@@ -445,6 +445,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             Debug.Log($"Peer {peer.Id} disconnected: {info.Reason}.");
 #endif
             var peerId = (ushort)peer.Id;
+            m_peers.Remove(peerId);
             if (!m_clients.TryGetValue(peerId, out var client)) return;
             ServerClientDisconnectedEvent?.Invoke(client);
             m_clients.Remove(peerId);
