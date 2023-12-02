@@ -11,5 +11,17 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (!NetSyncAPI.IsServer) return;
             Entity.Set(NetSyncAPI.ServerAPI.GetNextNetSynchronizeComponent());
         }
+
+        protected override void AddSpecialComponentsBeforeBakingWithoutEvents() {
+            base.AddSpecialComponentsBeforeBakingWithoutEvents();
+            if (!NetSyncAPI.IsServer) return;
+            Entity.SetWithoutEvents(NetSyncAPI.ServerAPI.GetNextNetSynchronizeComponent());
+        }
+
+        protected override void InvokeSpecialComponentEvents() {
+            base.InvokeSpecialComponentEvents();
+            Entity.InvokeAddedEvents<NetSynchronize>();
+            Entity.InvokeEnabledEvents<NetSynchronize>();
+        }
     }
 }

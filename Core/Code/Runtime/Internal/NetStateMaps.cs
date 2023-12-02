@@ -58,24 +58,19 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public EntityMap GetEntityMap() => 
-            m_entityMap;
+        public EntityMap GetEntityMap() => m_entityMap;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public EntityStateMap GetEntityStateMap() =>
-            m_entityStateMap;
+        public EntityStateMap GetEntityStateMap() => m_entityStateMap;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool HasComponentStateMap(ushort netId) => 
-            m_entityStateMap.ContainsKey(netId);
+        public bool HasComponentStateMap(ushort netId) => m_entityStateMap.ContainsKey(netId);
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ComponentStateMap GetComponentStateMap(ushort netId) => 
-            m_entityStateMap.Get(netId);
+        public ComponentStateMap GetComponentStateMap(ushort netId) => m_entityStateMap.Get(netId);
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ComponentStateMap GetOrCreateComponentStateMap(ushort netId) => 
-            m_entityStateMap.GetOrCreate(netId);
+        public ComponentStateMap GetOrCreateComponentStateMap(ushort netId) => m_entityStateMap.GetOrCreate(netId);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetComponentStateMap(ushort netId, out ComponentStateMap componentStateMap) {
@@ -162,7 +157,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public virtual void Clear() => m_map.Clear();
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public IEnumerable<KeyValuePair<TKey, TValue>> AsEnumerable() => m_map;
         }
 

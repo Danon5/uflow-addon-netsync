@@ -226,7 +226,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (m_clients.Count == 0) return;
             if (TryGetHostClient(out var hostClient) && client.id == hostClient.id) {
 #if UFLOW_DEBUG_ENABLED
-                Debug.Log("Host emulating RPC.");
+                Debug.Log($"Host emulating packet. Type: {NetPacketType.RPC}, RPC: {typeof(T).Name}");
 #endif
                 NetDeserializer.RpcDeserializer<T>.InvokeClientRpcDeserializedDirect(rpc);
                 return;
@@ -234,6 +234,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             BeginWrite(NetPacketType.RPC);
             NetSerializer.SerializeRpc(Buffer, rpc);
             EndWrite();
+#if UFLOW_DEBUG_ENABLED
+            Debug.Log($"Server sending packet. Type: {NetPacketType.RPC}, RPC: {typeof(T).Name}, ClientID: {client.id}");
+#endif
             SendBufferPayloadToClient(client, netReliability);
         }
 
@@ -243,13 +246,16 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (m_clients.Count == 0) return;
             if (HostStartingOrStarted) {
 #if UFLOW_DEBUG_ENABLED
-                Debug.Log("Host emulating RPC.");
+                Debug.Log($"Host emulating packet. Type: {NetPacketType.RPC}, RPC: {typeof(T).Name}");
 #endif
                 NetDeserializer.RpcDeserializer<T>.InvokeClientRpcDeserializedDirect(rpc);
             }
             BeginWrite(NetPacketType.RPC);
             NetSerializer.SerializeRpc(Buffer, rpc);
             EndWrite();
+#if UFLOW_DEBUG_ENABLED
+            Debug.Log($"Server sending packet to all. Type: {NetPacketType.RPC}, RPC: {typeof(T).Name}");
+#endif
             SendBufferPayloadToAllClients(netReliability);
         }
         
@@ -260,13 +266,17 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (m_clients.Count == 0) return;
             if (TryGetHostClient(out var hostClient) && excludedClient.id != hostClient.id) {
 #if UFLOW_DEBUG_ENABLED
-                Debug.Log("Host emulating RPC.");
+                Debug.Log($"Host emulating packet. Type: {NetPacketType.RPC}, RPC: {typeof(T).Name}");
 #endif
                 NetDeserializer.RpcDeserializer<T>.InvokeClientRpcDeserializedDirect(rpc);
             }
             BeginWrite(NetPacketType.RPC);
             NetSerializer.SerializeRpc(Buffer, rpc);
             EndWrite();
+#if UFLOW_DEBUG_ENABLED
+            Debug.Log(
+                $"Server sending packet to all except. Type: {NetPacketType.RPC}, RPC: {typeof(T).Name}, ClientID: {excludedClient.id}");
+#endif
             SendBufferPayloadToAllClientsExcept(excludedClient, netReliability);
         }
 
@@ -289,6 +299,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             BeginWrite(NetPacketType.RPC);
             NetSerializer.SerializeRpc(Buffer, rpc);
             EndWrite();
+#if UFLOW_DEBUG_ENABLED
+            Debug.Log($"Client sending packet. Type: {NetPacketType.RPC}, RPC: {typeof(T).Name}");
+#endif
             SendBufferPayloadToServer(netReliability);
         }
 

@@ -40,7 +40,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         private static void DeserializeHandshake(ByteBuffer buffer) {
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log("Deserializing Handshake.");
+            Debug.Log($"Deserializing {NetPacketType.Handshake}.");
 #endif
             var rpcCount = buffer.ReadUShort();
             for (var i = 0; i < rpcCount; i++) {
@@ -62,13 +62,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 var id = buffer.ReadUShort();
                 if (prefabCache == null) {
 #if UFLOW_DEBUG_ENABLED
-                    Debug.LogWarning($"Client failing to deserialize prefab with hash {hash} because cache is null.");
+                    Debug.LogError($"Client failing to deserialize prefab with hash {hash} because cache is null.");
 #endif
                     continue;
                 }
                 if (!prefabCache.HasLocalHash(hash)) {
 #if UFLOW_DEBUG_ENABLED
-                    Debug.LogWarning($"Client failing to deserialize prefab with hash {hash} because it has no matching local hash.");
+                    Debug.LogError($"Client failing to deserialize prefab with hash {hash} because it has no matching local hash.");
 #endif
                     continue;
                 }
@@ -78,14 +78,14 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         private static void DeserializeHandshakeResponse(ByteBuffer buffer) {
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log("Deserializing HandshakeResponse.");
+            Debug.Log($"Deserializing {NetPacketType.HandshakeResponse}.");
 #endif
         }
 
         private static void DeserializeRpc(ByteBuffer buffer, NetPeer peer) {
             var id = buffer.ReadUShort();
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log($"Deserializing RPC: {NetTypeIdMaps.RpcMap.GetTypeFromNetworkId(id).Name}");
+            Debug.Log($"Deserializing {NetPacketType.RPC}: {NetTypeIdMaps.RpcMap.GetTypeFromNetworkId(id).Name}");
 #endif
             if (!s_deserializeRpcDelegates.TryGetValue(id, out var @delegate)) {
                 @delegate = typeof(RpcDeserializer<>)
@@ -99,35 +99,39 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         private static void DeserializeCreateEntity(ByteBuffer buffer) {
             var netId = buffer.ReadUShort();
-            if (NetSyncModule.InternalSingleton == null) return;
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log($"Creating network entity. NetID: {netId}");
+            Debug.Log($"Deserializing {NetPacketType.CreateEntity}. NetID: {netId}");
 #endif
-            NetSyncModule.InternalSingleton.World.CreateEntity().Set(new NetSynchronize {
+            if (NetSyncModule.InternalSingleton == null) return;
+            var entity = NetSyncModule.InternalSingleton.World.CreateEntityWithoutEvents();
+            entity.SetWithoutEvents(new NetSynchronize {
                 netId = netId
             });
+            NetSyncModule.InternalSingleton.World.InvokeEntityCreationEvents(entity);
+            entity.InvokeAddedEvents<NetSynchronize>();
+            entity.InvokeEnabledEvents<NetSynchronize>();
         }
-        
+
         private static void DeserializeCreateSceneEntity(ByteBuffer buffer) {
             var netId = buffer.ReadUShort();
             var prefabId = buffer.ReadUShort();
-            if (NetSyncModule.InternalSingleton == null) return;
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log($"Creating network scene entity. NetID: {netId}, PrefabID: {prefabId}");
+            Debug.Log($"Deserializing {NetPacketType.CreateSceneEntity}. NetID: {netId}, PrefabID: {prefabId}");
 #endif
-            var entity = NetSyncPrefabCache.Get().GetPrefabFromNetworkId(prefabId).Instantiate().AsEntity(true);
-            entity.Set(new NetSynchronize {
+            if (NetSyncModule.InternalSingleton == null) return;
+            var entity = NetSyncPrefabCache.Get().GetPrefabFromNetworkId(prefabId).Instantiate().AsEntityWithoutEvents();
+            entity.SetWithoutEvents(new NetSynchronize {
                 netId = netId
             });
-            entity.Get<SceneEntityRef>().value.BakeAndFinalize();
+            entity.Get<SceneEntityRef>().value.InvokeEntityEvents();
         }
         
         private static void DeserializeDestroyEntity(ByteBuffer buffer) {
             var netId = buffer.ReadUShort();
-            if (NetSyncModule.InternalSingleton == null) return;
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log($"Destroying network entity. NetID: {netId}");
+            Debug.Log($"Deserializing {NetPacketType.DestroyEntity}. NetID: {netId}");
 #endif
+            if (NetSyncModule.InternalSingleton == null) return;
             NetSyncAPI.GetEntityFromNetId(netId).Destroy();
         }
 

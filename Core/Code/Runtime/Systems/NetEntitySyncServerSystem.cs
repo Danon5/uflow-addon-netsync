@@ -1,4 +1,5 @@
 ﻿using UFlow.Addon.ECS.Core.Runtime;
+using UnityEngine;
 using UnityEngine.Scripting;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
@@ -44,18 +45,25 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         private static void SendCreateEntityPacketToClient(NetClient client, in Entity entity) {
-            var netSyncModule = NetSyncModule.InternalSingleton;
             ref var netSynchronize = ref entity.Get<NetSynchronize>();
+            var netId = netSynchronize.netId;
             var isSceneEntity = entity.TryGet(out SceneEntityRef sceneEntityRef);
+            var netSyncModule = NetSyncModule.InternalSingleton;
             if (isSceneEntity) {
-                netSyncModule.Transport.BeginWrite(NetPacketType.CreateSceneEntity);
-                NetSerializer.SerializeCreateEntity(netSyncModule.Transport.Buffer, netSynchronize.netId);
                 var prefabId = NetSyncPrefabCache.Get().GetNetworkIdFromGuid(sceneEntityRef.value.Guid);
-                NetSerializer.SerializeCreateEntity(netSyncModule.Transport.Buffer, prefabId);
+                netSyncModule.Transport.BeginWrite(NetPacketType.CreateSceneEntity);
+                NetSerializer.SerializeCreateSceneEntity(netSyncModule.Transport.Buffer, netId, prefabId);
+#if UFLOW_DEBUG_ENABLED
+                Debug.Log(
+                    $"Server sending packet. Type: {NetPacketType.CreateSceneEntity}, ClientID: {client.id}, NetID: {netId}, PrefabID: {prefabId}");
+#endif
             }
             else {
                 netSyncModule.Transport.BeginWrite(NetPacketType.CreateEntity);
-                NetSerializer.SerializeCreateEntity(netSyncModule.Transport.Buffer, netSynchronize.netId);
+                NetSerializer.SerializeCreateEntity(netSyncModule.Transport.Buffer, netId);
+#if UFLOW_DEBUG_ENABLED
+                Debug.Log($"Server sending packet. Type: {NetPacketType.CreateEntity}, ClientID: {client.id}, NetID: {netId}");
+#endif
             }
             netSyncModule.Transport.EndWrite();
             netSyncModule.Transport.SendBufferPayloadToClient(client);
@@ -63,9 +71,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         private static void SendDestroyEntityPacketToClient(NetClient client, in Entity entity) {
             ref var netSynchronize = ref entity.Get<NetSynchronize>();
+            var netId = netSynchronize.netId;
             var netSyncModule = NetSyncModule.InternalSingleton;
             netSyncModule.Transport.BeginWrite(NetPacketType.DestroyEntity);
-            NetSerializer.SerializeDestroyEntity(netSyncModule.Transport.Buffer, netSynchronize.netId);
+            NetSerializer.SerializeDestroyEntity(netSyncModule.Transport.Buffer, netId);
+#if UFLOW_DEBUG_ENABLED
+            Debug.Log($"Server sending packet. Type: {NetPacketType.DestroyEntity}, ClientID: {client.id}, NetID: {netId}");
+#endif
             netSyncModule.Transport.EndWrite();
             netSyncModule.Transport.SendBufferPayloadToClient(client);
         }
@@ -73,7 +85,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         private static void SyncComponentsToClient(NetClient client, in Entity entity) {
             ref var netSynchronize = ref entity.Get<NetSynchronize>();
             var netId = netSynchronize.netId;
-            if (NetSyncModule.InternalSingleton.StateMaps.TryGetComponentStateMap(netId, out var componentStateMap)) return;
+            if (!NetSyncModule.InternalSingleton.StateMaps.TryGetComponentStateMap(netId, out var componentStateMap)) return;
             foreach (var (compId, varStateMap) in componentStateMap.AsEnumerable()) {
                 foreach (var (varId, netVar) in varStateMap.AsEnumerable()) {
                     

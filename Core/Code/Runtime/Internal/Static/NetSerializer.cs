@@ -36,6 +36,11 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             buffer.Write(netId);
         }
         
+        public static void SerializeCreateSceneEntity(ByteBuffer buffer, ushort netId, ushort prefabId) {
+            buffer.Write(netId);
+            buffer.Write(prefabId);
+        }
+        
         public static void SerializeDestroyEntity(ByteBuffer buffer, ushort netId) {
             buffer.Write(netId);
         }
