@@ -81,8 +81,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             };
             Buffer = new ByteBuffer(true);
             m_writer = new NetDataWriter(true);
-            NetworkTypeIdMaps.RpcMap.InitializeLocallyIfRequired();
-            NetworkTypeIdMaps.ComponentMap.InitializeLocallyIfRequired();
+            NetTypeIdMaps.RpcMap.InitializeLocallyIfRequired();
+            NetTypeIdMaps.ComponentMap.InitializeLocallyIfRequired();
         }
 
         public async UniTask StartServerAsync(ushort port = c_default_port) {
@@ -374,8 +374,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 result = m_server.Start(port);
                 await UniTask.WaitUntil(() => m_server.IsRunning).Timeout(s_timeout);
             }
-            NetworkTypeIdMaps.RpcMap.InitializeServer();
-            NetworkTypeIdMaps.ComponentMap.InitializeServer();
+            NetTypeIdMaps.RpcMap.InitializeServer();
+            NetTypeIdMaps.ComponentMap.InitializeServer();
             var prefabCache = NetSyncPrefabCache.Get();
             if (prefabCache == null) return result;
             prefabCache.ServerRegisterNetworkIds();
@@ -393,8 +393,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #endif
             m_peers.Clear();
             m_clients.Clear();
-            NetworkTypeIdMaps.RpcMap.ClearNetworkCaches();
-            NetworkTypeIdMaps.ComponentMap.ClearNetworkCaches();
+            NetTypeIdMaps.RpcMap.ClearNetworkCaches();
+            NetTypeIdMaps.ComponentMap.ClearNetworkCaches();
             var prefabCache = NetSyncPrefabCache.Get();
             if (prefabCache == null) return;
             prefabCache.ClearNetworkIdMaps();
@@ -421,8 +421,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (HostState == ConnectionState.Stopping)
                 Debug.Log("Client stopped.");
 #endif
-            NetworkTypeIdMaps.RpcMap.ClearNetworkCaches();
-            NetworkTypeIdMaps.ComponentMap.ClearNetworkCaches();
+            NetTypeIdMaps.RpcMap.ClearNetworkCaches();
+            NetTypeIdMaps.ComponentMap.ClearNetworkCaches();
             var prefabCache = NetSyncPrefabCache.Get();
             if (prefabCache == null) return;
             prefabCache.ClearNetworkIdMaps();
@@ -466,8 +466,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
         
         private void ClientOnDisconnected(NetPeer peer, DisconnectInfo info) {
-            NetworkTypeIdMaps.RpcMap.ClearNetworkCaches();
-            NetworkTypeIdMaps.ComponentMap.ClearNetworkCaches();
+            NetTypeIdMaps.RpcMap.ClearNetworkCaches();
+            NetTypeIdMaps.ComponentMap.ClearNetworkCaches();
 #if UFLOW_DEBUG_ENABLED
             Debug.Log($"Disconnected: {info.Reason}.");
 #endif

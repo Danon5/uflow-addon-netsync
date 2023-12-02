@@ -15,13 +15,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Entity GetEntityFromNetId(ushort netId) {
             NetSyncModule.ThrowIfNotLoaded();
-            return NetSyncModule.InternalSingleton.EntityMap.Get(netId);
+            return NetSyncModule.InternalSingleton.StateMaps.GetEntityMap().Get(netId);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool TryGetEntityFromNetId(ushort netId, out Entity entity) {
             NetSyncModule.ThrowIfNotLoaded();
-            return NetSyncModule.InternalSingleton.EntityMap.TryGet(netId, out entity);
+            return NetSyncModule.InternalSingleton.StateMaps.GetEntityMap().TryGet(netId, out entity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -31,10 +31,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void InitializeNetVar<T>(ref NetVar<T> netVar, ushort netId, byte varId, bool interpolate = false) {
+        public static void InitializeNetVar<T>(ref NetVar<T> netVar, ushort netId, ushort compId, byte varId, bool interpolate = false) {
             NetSyncModule.ThrowIfNotLoaded();
             netVar ??= new NetVar<T>();
-            netVar.Initialize(netId, varId, interpolate);
+            netVar.Initialize(netId, compId, varId, interpolate);
         }
 
         public static class ServerAPI {

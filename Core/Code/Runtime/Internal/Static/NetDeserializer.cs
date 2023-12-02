@@ -46,13 +46,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             for (var i = 0; i < rpcCount; i++) {
                 var hash = buffer.ReadULong();
                 var id = buffer.ReadUShort();
-                NetworkTypeIdMaps.RpcMap.RegisterNetworkHash(hash, id);
+                NetTypeIdMaps.RpcMap.RegisterNetworkHash(hash, id);
             }
             var componentCount = buffer.ReadUShort();
             for (var i = 0; i < componentCount; i++) {
                 var hash = buffer.ReadULong();
                 var id = buffer.ReadUShort();
-                NetworkTypeIdMaps.ComponentMap.RegisterNetworkHash(hash, id);
+                NetTypeIdMaps.ComponentMap.RegisterNetworkHash(hash, id);
             }
             var prefabCount = buffer.ReadUShort();
             if (prefabCount == 0) return;
@@ -85,11 +85,11 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         private static void DeserializeRpc(ByteBuffer buffer, NetPeer peer) {
             var id = buffer.ReadUShort();
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log($"Deserializing rpc {NetworkTypeIdMaps.RpcMap.GetTypeFromNetworkId(id).Name}.");
+            Debug.Log($"Deserializing rpc {NetTypeIdMaps.RpcMap.GetTypeFromNetworkId(id).Name}.");
 #endif
             if (!s_deserializeRpcDelegates.TryGetValue(id, out var @delegate)) {
                 @delegate = typeof(RpcDeserializer<>)
-                    .MakeGenericType(NetworkTypeIdMaps.RpcMap.GetTypeFromNetworkId(id))
+                    .MakeGenericType(NetTypeIdMaps.RpcMap.GetTypeFromNetworkId(id))
                     .GetMethod("DeserializeRpcInternal")!
                     .CreateDelegate(typeof(DeserializeRpcDelegate)) as DeserializeRpcDelegate;
                 s_deserializeRpcDelegates.Add(id, @delegate);

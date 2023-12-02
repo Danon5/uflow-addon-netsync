@@ -3,13 +3,13 @@
 namespace UFlow.Addon.NetSync.Core.Runtime {
     internal static class NetSerializer {
         public static void SerializeHandshake(ByteBuffer buffer) {
-            buffer.Write((ushort)NetworkTypeIdMaps.RpcMap.GetNetworkRegisteredCount());
-            foreach (var (hash, id) in NetworkTypeIdMaps.RpcMap.GetNetworkHashToIdEnumerable()) {
+            buffer.Write((ushort)NetTypeIdMaps.RpcMap.GetNetworkRegisteredCount());
+            foreach (var (hash, id) in NetTypeIdMaps.RpcMap.GetNetworkHashToIdEnumerable()) {
                 buffer.Write(hash);
                 buffer.Write(id);
             }
-            buffer.Write((ushort)NetworkTypeIdMaps.ComponentMap.GetNetworkRegisteredCount());
-            foreach (var (hash, id) in NetworkTypeIdMaps.ComponentMap.GetNetworkHashToIdEnumerable()) {
+            buffer.Write((ushort)NetTypeIdMaps.ComponentMap.GetNetworkRegisteredCount());
+            foreach (var (hash, id) in NetTypeIdMaps.ComponentMap.GetNetworkHashToIdEnumerable()) {
                 buffer.Write(hash);
                 buffer.Write(id);
             }
@@ -28,7 +28,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public static void SerializeHandshakeResponse(ByteBuffer buffer) { }
         
         public static void SerializeRpc<T>(ByteBuffer buffer, T rpc) where T : INetRpc {
-            buffer.Write(NetworkTypeIdMaps.RpcMap.GetNetworkIdFromType(typeof(T)));
+            buffer.Write(NetTypeIdMaps.RpcMap.GetNetworkIdFromType(typeof(T)));
             SerializationAPI.Serialize(buffer, ref rpc);
         }
 

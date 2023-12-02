@@ -10,12 +10,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         protected override void EntityAdded(World world, in Entity entity) {
             ref var netSynchronize = ref entity.Get<NetSynchronize>();
-            NetSyncModule.InternalSingleton.EntityMap.Add(netSynchronize.netId, entity);
+            NetSyncModule.InternalSingleton.StateMaps.GetEntityMap().Add(netSynchronize.netId, entity);
         }
 
         protected override void EntityRemoved(World world, in Entity entity) {
             ref var netSynchronize = ref entity.Get<NetSynchronize>();
-            NetSyncModule.InternalSingleton.EntityMap.Remove(netSynchronize.netId);
+            NetSyncModule.InternalSingleton.StateMaps.GetEntityMap().Remove(netSynchronize.netId);
         }
     }
 }

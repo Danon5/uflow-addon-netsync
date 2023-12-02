@@ -17,17 +17,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         internal static NetSyncModule InternalSingleton { get; private set; }
         internal LiteNetLibTransport Transport { get; }
         internal NetAwarenessMap AwarenessMap { get; }
-        internal NetEntityMap EntityMap { get; }
-        internal NetVarMap VarMap { get; }
-        internal NetDeltaMap DeltaMap { get; }
+        internal NetStateMaps StateMaps { get; }
         internal ushort NextNetworkId { get; set; }
         
         public NetSyncModule() {
             Transport = new LiteNetLibTransport();
             AwarenessMap = new NetAwarenessMap();
-            EntityMap = new NetEntityMap();
-            VarMap = new NetVarMap();
-            DeltaMap = new NetDeltaMap();
+            StateMaps = new NetStateMaps();
         }
 
         public override UniTask LoadDirectAsync() {
@@ -51,6 +47,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             Transport.ServerClientAuthorizedEvent -= OnServerAuthorizedClient;
             Transport.ServerClientDisconnectedEvent -= OnServerDisconnectedClient;
             Transport.ClientStateChangedEvent -= OnClientStateChanged;
+            StateMaps.DisposeSubscriptions();
             EnsureNetWorldDestroyed();
             InternalSingleton = null;
         }
@@ -97,18 +94,18 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         private void EnsureNetWorldCreated() {
             EcsModule<NetWorld>.EnsureLoaded();
             World = EcsModule<NetWorld>.Get().World;
+            StateMaps.RegisterSubscriptionsIfRequired();
         }
         
         private void EnsureNetWorldDestroyed() {
+            StateMaps.DisposeSubscriptions();
             EcsModule<NetWorld>.EnsureUnloaded();
             World = null;
         }
 
         private void ResetState() {
             AwarenessMap.Clear();
-            EntityMap.Clear();
-            VarMap.Clear();
-            DeltaMap.Clear();
+            StateMaps.Clear();
         }
 
         private void OnServerStateChanged(ConnectionState state) {

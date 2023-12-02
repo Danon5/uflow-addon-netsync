@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     [Serializable]
-    public sealed class NetVar<T> : INetVar, IDisposable {
+    public sealed class NetVar<T> : INetVar {
         private static readonly HashSet<Type> s_validInterpolateTypes = new() {
             typeof(float)
         };
@@ -34,15 +34,11 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         bool INetVar.Interpolate => m_interpolate;
         private bool IsValidInterpolateType => s_validInterpolateTypes.Contains(typeof(T));
 
-        public void Dispose() {
-            NetSyncModule.InternalSingleton.VarMap.Remove(m_netId, this);
-        }
-
-        internal void Initialize(ushort netId, byte varId, bool interpolate) {
+        internal void Initialize(ushort netId, ushort compId, byte varId, bool interpolate) {
             m_netId = netId;
             m_varId = varId;
             m_interpolate = interpolate && IsValidInterpolateType;
-            NetSyncModule.InternalSingleton.VarMap.Add(netId, this);
+            NetSyncModule.InternalSingleton.StateMaps.GetOrCreateVarStateMap(netId, compId).Add(varId, this);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

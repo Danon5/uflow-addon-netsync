@@ -5,7 +5,7 @@ using UFlow.Addon.Serialization.Core.Runtime;
 using UFlow.Core.Runtime;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
-    internal sealed class NetworkTypeIdMap<T> {
+    internal sealed class GenericNetTypeIdMap<T> {
         private readonly Dictionary<ulong, Type> m_hashToTypeMap = new();
         private readonly Dictionary<Type, ulong> m_typeToHashMap = new();
         private readonly Dictionary<ushort, Type> m_idToTypeMap = new();
