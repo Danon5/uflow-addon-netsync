@@ -10,13 +10,14 @@ using UnityEngine;
 namespace UFlow.Addon.NetSync.Core.Runtime {
     [Serializable]
     public sealed class NetVar<T> : INetVar {
+        private const string c_internal = "Internal";
         private static readonly HashSet<Type> s_validInterpolateTypes = new() {
             typeof(float)
         };
         [SerializeField] private T m_value;
-        [ShowInInspector, ReadOnly] private ushort m_netId;
-        [ShowInInspector, ReadOnly] private byte m_varId;
-        [ShowInInspector, ReadOnly] private bool m_interpolate;
+        [ShowInInspector, ReadOnly, FoldoutGroup(c_internal)] private ushort m_netId;
+        [ShowInInspector, ReadOnly, FoldoutGroup(c_internal)] private byte m_varId;
+        [ShowInInspector, ReadOnly, FoldoutGroup(c_internal)] private bool m_interpolate;
         private T m_lastSentValue;
         private bool m_isDirty;
 
