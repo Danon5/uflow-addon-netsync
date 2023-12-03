@@ -16,28 +16,22 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         private readonly Dictionary<ushort, ulong> m_networkIdToHashMap = new();
         private readonly Dictionary<ushort, GameObject> m_networkIdToPrefabMap = new();
         [SerializeField, ListDrawerSettings(IsReadOnly = true)] 
-        private List<GameObject> m_prefabs;
+        private List<UFlowAssetRef<GameObject>> m_prefabs;
 
         public int NetworkPrefabCount => m_networkIdToPrefabMap.Count;
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void InitializeOnLoad() {
-            var cache = Get();
-            if (cache == null) return;
-            cache.ClearNetworkIdMaps();
 #if UNITY_EDITOR
-            FullRefreshEditorOnly();
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void InitializeOnLoad() => FullRefreshEditorOnly();
+        
+        private void OnEnable() => EditorApplication.delayCall += FullRefreshEditorOnly;
 #endif
+
+        protected override void OnLoaded() {
+            base.OnLoaded();
+            RefreshLocalHashMap();
         }
 
-        private void OnEnable() {
-#if UNITY_EDITOR
-            EditorApplication.delayCall += FullRefreshEditorOnly;
-#else
-            RefreshLocalHashMap();
-#endif
-        }
-        
         public IEnumerable<(ulong, ushort)> GetNetworkPrefabHashToIdEnumerable() {
             foreach (var (id, hash) in m_networkIdToHashMap)
                 yield return (hash, id);
@@ -73,13 +67,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             try {
                 AssetDatabase.Refresh();
                 var guids = AssetDatabase.FindAssets("t:Prefab");
-                List<GameObject> netPrefabs = null;
+                List<UFlowAssetRef<GameObject>> netPrefabs = null;
                 foreach (var guid in guids) {
                     var path = AssetDatabase.GUIDToAssetPath(guid);
                     var asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                     if (!asset.TryGetComponent(out NetSceneEntity _)) continue;
-                    netPrefabs ??= new List<GameObject>();
-                    netPrefabs.Add(asset);
+                    netPrefabs ??= new List<UFlowAssetRef<GameObject>>();
+                    netPrefabs.Add(new UFlowAssetRef<GameObject>(guid));
                 }
                 if (netPrefabs == null || netPrefabs.Count == 0) {
                     var existingCache = Get();
@@ -88,10 +82,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                     return;
                 }
                 var cache = GetOrCreateEditorOnly();
-                cache.m_prefabs ??= new List<GameObject>();
+                cache.m_prefabs ??= new List<UFlowAssetRef<GameObject>>();
                 cache.m_prefabs.Clear();
                 cache.m_prefabs.AddRange(netPrefabs);
-                cache.RefreshLocalHashMap();
             }
             catch (Exception e) {
                 Debug.LogWarning(e);
@@ -103,7 +96,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             m_localHashToPrefabMap.Clear();
             m_localHashToGuidMap.Clear();
             foreach (var prefab in m_prefabs)
-                RegisterLocalPrefab(prefab);
+                RegisterLocalPrefab(prefab.Value.LoadAssetAsync().WaitForCompletion());
         }
         
         private void RegisterLocalPrefab(GameObject prefab) {
