@@ -1,6 +1,5 @@
 ﻿using UFlow.Addon.ECS.Core.Runtime;
 using UFlow.Addon.Serialization.Core.Runtime;
-using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     internal static class NetSerializer {
@@ -57,7 +56,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             foreach (var (compId, componentState) in componentStateMap.AsEnumerable()) {
                 var componentType = NetTypeIdMaps.ComponentMap.GetTypeFromNetworkId(compId);
                 var enabled = entity.IsEnabledRaw(componentType);
-                Debug.Log($"Writing {enabled} on {componentType.Name}");
                 buffer.Write(compId);
                 buffer.Write(enabled);
                 buffer.Write((byte)componentState.Count);

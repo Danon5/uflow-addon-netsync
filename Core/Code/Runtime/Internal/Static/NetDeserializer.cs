@@ -4,7 +4,6 @@ using LiteNetLib;
 using UFlow.Addon.ECS.Core.Runtime;
 using UFlow.Addon.Serialization.Core.Runtime;
 using UFlow.Core.Runtime;
-using UnityEngine;
 using UnityEngine.Scripting;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
@@ -173,7 +172,6 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 var componentType = NetTypeIdMaps.ComponentMap.GetTypeFromNetworkId(compId);
                 if (!localCompIdList.Contains(compId))
                     entity.SetRaw(componentType);
-                Debug.Log($"Reading {networkCompEnabledList[i]} on {componentType.Name}");
                 entity.SetEnabledRaw(componentType, networkCompEnabledList[i]);
             }
             entity.SetEnabled(isEnabled);
