@@ -89,7 +89,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public async UniTask StartServerAsync(ushort port = c_default_port) {
             if (ServerStartingOrStarted) {
 #if UFLOW_DEBUG_ENABLED
-                UFlowDebug.LogError("Server already started.");
+                DebugAPI.LogError("Server already started.");
 #endif
                 return;
             }
@@ -100,14 +100,14 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
             ServerState = ConnectionState.Started;
 #if UFLOW_DEBUG_ENABLED
-            UFlowDebug.LogMessage($"Server started. Port: {port}");
+            DebugAPI.LogMessage($"Server started. Port: {port}");
 #endif
         }
 
         public async UniTask StopServerAsync() {
             if (ServerStoppingOrStopped) {
 #if UFLOW_DEBUG_ENABLED
-                UFlowDebug.LogError("Server not yet started.");
+                DebugAPI.LogError("Server not yet started.");
 #endif
                 return;
             }
@@ -117,14 +117,14 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             ServerState = ConnectionState.Stopped;
             OfflineMode = false;
 #if UFLOW_DEBUG_ENABLED
-            UFlowDebug.LogMessage("Server stopped.");
+            DebugAPI.LogMessage("Server stopped.");
 #endif
         }
 
         public async UniTask StartClientAsync(string ip = c_default_ip, ushort port = c_default_port) {
             if (ClientStartingOrStarted) {
 #if UFLOW_DEBUG_ENABLED
-                UFlowDebug.LogError("Client already started.");
+                DebugAPI.LogError("Client already started.");
 #endif
                 return;
             }
@@ -137,14 +137,14 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
             ClientState = ConnectionState.Started;
 #if UFLOW_DEBUG_ENABLED
-            UFlowDebug.LogMessage($"Client started. IP: {ip}, Port: {port}");
+            DebugAPI.LogMessage($"Client started. IP: {ip}, Port: {port}");
 #endif
         }
 
         public async UniTask StopClientAsync() {
             if (ClientStoppingOrStopped) {
 #if UFLOW_DEBUG_ENABLED
-                UFlowDebug.LogError("Client not yet started.");
+                DebugAPI.LogError("Client not yet started.");
 #endif
                 return;
             }
@@ -153,14 +153,14 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             ClientState = ConnectionState.Stopped;
             OfflineMode = false;
 #if UFLOW_DEBUG_ENABLED
-            UFlowDebug.LogMessage("Client stopped.");
+            DebugAPI.LogMessage("Client stopped.");
 #endif
         }
 
         public async UniTask StartHostAsync(bool offlineMode = false, ushort port = c_default_port) {
             if (HostStartingOrStarted) {
 #if UFLOW_DEBUG_ENABLED
-                UFlowDebug.LogError("Host already started.");
+                DebugAPI.LogError("Host already started.");
 #endif
                 return;
             }
@@ -179,9 +179,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             m_clients.Add(0, new NetClient(0));
             HostState = ConnectionState.Started;
 #if UFLOW_DEBUG_ENABLED
-            UFlowDebug.LogMessage("Host started.");
-            UFlowDebug.LogMessage("Host connected.");
-            UFlowDebug.LogMessage("Connected.");
+            DebugAPI.LogMessage("Host started.");
+            DebugAPI.LogMessage("Host connected.");
+            DebugAPI.LogMessage("Connected.");
 #endif
             ServerClientAuthorizedEvent?.Invoke(m_clients[0]);
         }
@@ -189,7 +189,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public async UniTask StopHostAsync() {
             if (HostStoppingOrStopped) {
 #if UFLOW_DEBUG_ENABLED
-                UFlowDebug.LogError("Host not yet started.");
+                DebugAPI.LogError("Host not yet started.");
 #endif
                 return;
             }
@@ -199,7 +199,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             await ClientCleanupAsync();
             HostState = ConnectionState.Stopped;
 #if UFLOW_DEBUG_ENABLED
-            UFlowDebug.LogMessage("Host stopped.");
+            DebugAPI.LogMessage("Host stopped.");
 #endif
         }
         
@@ -214,13 +214,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (m_server.IsRunning) {
                 m_server.Stop();
 #if UFLOW_DEBUG_ENABLED
-                UFlowDebug.LogMessage("Server stopped.");
+                DebugAPI.LogMessage("Server stopped.");
 #endif
             }
             if (m_client.IsRunning) {
                 m_client.Stop();
 #if UFLOW_DEBUG_ENABLED
-                UFlowDebug.LogMessage("Client stopped.");
+                DebugAPI.LogMessage("Client stopped.");
 #endif
             }
         }
@@ -257,7 +257,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (m_clients.Count == 0) return;
             if (TryGetHostClient(out var hostClient) && client.id == hostClient.id) {
 #if UFLOW_DEBUG_ENABLED
-                UFlowDebug.LogMessage($"Host emulating packet. Type: {NetPacketType.RPC}, RPC: {typeof(T).Name}");
+                DebugAPI.LogMessage($"Host emulating packet. Type: {NetPacketType.RPC}, RPC: {typeof(T).Name}");
 #endif
                 NetDeserializer.RpcDeserializer<T>.InvokeClientRpcDeserializedDirect(rpc);
                 return;
@@ -266,7 +266,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             NetSerializer.SerializeRpc(Buffer, rpc);
             EndWrite();
 #if UFLOW_DEBUG_ENABLED
-            UFlowDebug.LogMessage($"Server sending packet. Type: {NetPacketType.RPC}, RPC: {typeof(T).Name}, ClientID: {client.id}");
+            DebugAPI.LogMessage($"Server sending packet. Type: {NetPacketType.RPC}, RPC: {typeof(T).Name}, ClientID: {client.id}");
 #endif
             SendBufferPayloadToClient(client, netReliability);
         }
@@ -277,7 +277,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (m_clients.Count == 0) return;
             if (HostStartingOrStarted) {
 #if UFLOW_DEBUG_ENABLED
-                UFlowDebug.LogMessage($"Host emulating packet. Type: {NetPacketType.RPC}, RPC: {typeof(T).Name}");
+                DebugAPI.LogMessage($"Host emulating packet. Type: {NetPacketType.RPC}, RPC: {typeof(T).Name}");
 #endif
                 NetDeserializer.RpcDeserializer<T>.InvokeClientRpcDeserializedDirect(rpc);
             }
@@ -285,7 +285,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             NetSerializer.SerializeRpc(Buffer, rpc);
             EndWrite();
 #if UFLOW_DEBUG_ENABLED
-            UFlowDebug.LogMessage($"Server sending packet to all. Type: {NetPacketType.RPC}, RPC: {typeof(T).Name}");
+            DebugAPI.LogMessage($"Server sending packet to all. Type: {NetPacketType.RPC}, RPC: {typeof(T).Name}");
 #endif
             SendBufferPayloadToAllClients(netReliability);
         }
@@ -297,7 +297,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (m_clients.Count == 0) return;
             if (TryGetHostClient(out var hostClient) && excludedClient.id != hostClient.id) {
 #if UFLOW_DEBUG_ENABLED
-                UFlowDebug.LogMessage($"Host emulating packet. Type: {NetPacketType.RPC}, RPC: {typeof(T).Name}");
+                DebugAPI.LogMessage($"Host emulating packet. Type: {NetPacketType.RPC}, RPC: {typeof(T).Name}");
 #endif
                 NetDeserializer.RpcDeserializer<T>.InvokeClientRpcDeserializedDirect(rpc);
             }
@@ -305,7 +305,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             NetSerializer.SerializeRpc(Buffer, rpc);
             EndWrite();
 #if UFLOW_DEBUG_ENABLED
-            UFlowDebug.LogMessage(
+            DebugAPI.LogMessage(
                 $"Server sending packet to all except. Type: {NetPacketType.RPC}, RPC: {typeof(T).Name}, ClientID: {excludedClient.id}");
 #endif
             SendBufferPayloadToAllClientsExcept(excludedClient, netReliability);
@@ -331,7 +331,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             NetSerializer.SerializeRpc(Buffer, rpc);
             EndWrite();
 #if UFLOW_DEBUG_ENABLED
-            UFlowDebug.LogMessage($"Client sending packet. Type: {NetPacketType.RPC}, RPC: {typeof(T).Name}");
+            DebugAPI.LogMessage($"Client sending packet. Type: {NetPacketType.RPC}, RPC: {typeof(T).Name}");
 #endif
             SendBufferPayloadToServer(netReliability);
         }
@@ -345,7 +345,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         public void ServerAuthorizePeer(NetPeer peer) {
 #if UFLOW_DEBUG_ENABLED
-            UFlowDebug.LogMessage($"Authorized peer. ID: {peer.Id}");
+            DebugAPI.LogMessage($"Authorized peer. ID: {peer.Id}");
 #endif
             var client = new NetClient((ushort)peer.Id);
             m_clients.Add((ushort)peer.Id, client);
@@ -430,7 +430,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
 #if UFLOW_DEBUG_ENABLED
             if (HostState == ConnectionState.Stopping)
-                UFlowDebug.LogMessage("Server stopped.");
+                DebugAPI.LogMessage("Server stopped.");
 #endif
             m_peers.Clear();
             m_clients.Clear();
@@ -448,7 +448,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             await UniTask.WaitUntil(() => m_client.IsRunning).Timeout(s_timeout);
 #if UFLOW_DEBUG_ENABLED
             if (ServerPeer == null)
-                UFlowDebug.LogMessage($"Connection failed. IP: {ip}, Port: {port}");
+                DebugAPI.LogMessage($"Connection failed. IP: {ip}, Port: {port}");
 #endif
             return ServerPeer != null;
         }
@@ -460,7 +460,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
 #if UFLOW_DEBUG_ENABLED
             if (HostState == ConnectionState.Stopping)
-                UFlowDebug.LogMessage("Client stopped.");
+                DebugAPI.LogMessage("Client stopped.");
 #endif
             NetTypeIdMaps.RpcMap.ClearNetworkCaches();
             NetTypeIdMaps.ComponentMap.ClearNetworkCaches();
@@ -471,7 +471,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         private void ServerOnPeerConnected(NetPeer peer) {
 #if UFLOW_DEBUG_ENABLED
-            UFlowDebug.LogMessage($"Peer connected. ID: {peer.Id}");
+            DebugAPI.LogMessage($"Peer connected. ID: {peer.Id}");
 #endif
             if (IsHost((ushort)peer.Id)) return;
             m_peers.Add((ushort)peer.Id, peer);
@@ -483,7 +483,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         
         private void ServerOnPeerDisconnected(NetPeer peer, DisconnectInfo info) {
 #if UFLOW_DEBUG_ENABLED
-            UFlowDebug.LogMessage($"Peer disconnected. ID: {peer.Id}, Reason: {info.Reason}");
+            DebugAPI.LogMessage($"Peer disconnected. ID: {peer.Id}, Reason: {info.Reason}");
 #endif
             var peerId = (ushort)peer.Id;
             m_peers.Remove(peerId);
@@ -495,7 +495,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         private void ServerOnReceive(NetPeer peer, NetPacketReader reader, byte channel, DeliveryMethod deliveryMethod) {
             BeginRead(reader, out var packetType);
 #if UFLOW_DEBUG_ENABLED
-            UFlowDebug.LogMessage($"Server received packet. Type: {packetType}");
+            DebugAPI.LogMessage($"Server received packet. Type: {packetType}");
 #endif
             NetDeserializer.Deserialize(Buffer, packetType, peer);
             EndRead(reader);
@@ -503,13 +503,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         private void ClientOnConnected(NetPeer peer) {
 #if UFLOW_DEBUG_ENABLED
-            UFlowDebug.LogMessage("Connected.");
+            DebugAPI.LogMessage("Connected.");
 #endif
         }
         
         private void ClientOnDisconnected(NetPeer peer, DisconnectInfo info) {
 #if UFLOW_DEBUG_ENABLED
-            UFlowDebug.LogMessage($"Disconnected. Reason: {info.Reason}");
+            DebugAPI.LogMessage($"Disconnected. Reason: {info.Reason}");
 #endif
             if (!ClientStartingOrStarted) return;
             StopClientAsync().Forget();
@@ -519,7 +519,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         private void ClientOnReceive(NetPeer peer, NetPacketReader reader, byte channel, DeliveryMethod deliveryMethod) {
             BeginRead(reader, out var packetType);
 #if UFLOW_DEBUG_ENABLED
-            UFlowDebug.LogMessage($"Client received packet. Type: {packetType}");
+            DebugAPI.LogMessage($"Client received packet. Type: {packetType}");
 #endif
             NetDeserializer.Deserialize(Buffer, packetType, peer);
             EndRead(reader);

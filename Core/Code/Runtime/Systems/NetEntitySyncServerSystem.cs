@@ -60,7 +60,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 netSyncModule.Transport.BeginWrite(NetPacketType.CreateSceneEntity);
                 NetSerializer.SerializeCreateSceneEntity(netSyncModule.Transport.Buffer, netId, prefabId);
 #if UFLOW_DEBUG_ENABLED
-                UFlowDebug.LogMessage($"Server sending packet. Type: {NetPacketType.CreateSceneEntity}, " +
+                DebugAPI.LogMessage($"Server sending packet. Type: {NetPacketType.CreateSceneEntity}, " +
                     $"ClientID: {client.id}, NetID: {netId}, PrefabID: {prefabId}");
 #endif
             }
@@ -68,7 +68,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 netSyncModule.Transport.BeginWrite(NetPacketType.CreateEntity);
                 NetSerializer.SerializeCreateEntity(netSyncModule.Transport.Buffer, netId);
 #if UFLOW_DEBUG_ENABLED
-                UFlowDebug.LogMessage($"Server sending packet. Type: {NetPacketType.CreateEntity}, ClientID: {client.id}, NetID: {netId}");
+                DebugAPI.LogMessage($"Server sending packet. Type: {NetPacketType.CreateEntity}, ClientID: {client.id}, NetID: {netId}");
 #endif
             }
             netSyncModule.Transport.EndWrite();
@@ -82,7 +82,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             netSyncModule.Transport.BeginWrite(NetPacketType.DestroyEntity);
             NetSerializer.SerializeDestroyEntity(netSyncModule.Transport.Buffer, netId);
 #if UFLOW_DEBUG_ENABLED
-            UFlowDebug.LogMessage($"Server sending packet. Type: {NetPacketType.DestroyEntity}, ClientID: {client.id}, NetID: {netId}");
+            DebugAPI.LogMessage($"Server sending packet. Type: {NetPacketType.DestroyEntity}, ClientID: {client.id}, NetID: {netId}");
 #endif
             netSyncModule.Transport.EndWrite();
             netSyncModule.Transport.SendBufferPayloadToClient(client);

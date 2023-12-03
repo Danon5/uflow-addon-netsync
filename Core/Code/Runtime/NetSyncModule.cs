@@ -73,19 +73,19 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (Physics.simulationMode != SimulationMode.Script) {
                 Physics.simulationMode = SimulationMode.Script;
 #if UFLOW_DEBUG_ENABLED
-                UFlowDebug.LogWarning("NetSync overriding Physics.SimulationMode.");
+                DebugAPI.LogWarning("NetSync overriding Physics.SimulationMode.");
 #endif
             }
             if (Physics2D.simulationMode != SimulationMode2D.Script) {
                 Physics2D.simulationMode = SimulationMode2D.Script;
 #if UFLOW_DEBUG_ENABLED
-                UFlowDebug.LogWarning("NetSync overriding Physics2D.SimulationMode.");
+                DebugAPI.LogWarning("NetSync overriding Physics2D.SimulationMode.");
 #endif
             }
             if (!Mathf.Approximately(Time.fixedDeltaTime - TickDelta, 0f)) {
                 Time.fixedDeltaTime = TickDelta;
 #if UFLOW_DEBUG_ENABLED
-                UFlowDebug.LogWarning("NetSync overriding Time.fixedDeltaTime.");
+                DebugAPI.LogWarning("NetSync overriding Time.fixedDeltaTime.");
 #endif
             }
         }
