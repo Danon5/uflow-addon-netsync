@@ -4,7 +4,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using UFlow.Addon.ECS.Core.Runtime;
 using UFlow.Core.Runtime;
-using UnityEngine;
 using UnityEngine.Scripting;
 using DisposableExtensions = UFlow.Addon.ECS.Core.Runtime.DisposableExtensions;
 

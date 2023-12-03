@@ -1,13 +1,11 @@
 ﻿using System;
 using UFlow.Addon.ECS.Core.Runtime;
-using UnityEngine;
 using UnityEngine.Scripting;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     [Preserve]
     [ExecuteInWorld(typeof(NetWorld))]
     internal sealed class NetEntityCacheSystem : BaseSystem {
-        private static readonly Type s_netComponentType = typeof(IEcsNetComponent);
         private IDisposable m_addedSubscription;
         private IDisposable m_removedSubscription;
         public NetEntityCacheSystem(in World world) : base(in world) { }

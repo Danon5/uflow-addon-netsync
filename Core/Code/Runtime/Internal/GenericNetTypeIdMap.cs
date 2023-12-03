@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UFlow.Addon.Serialization.Core.Runtime;
 using UFlow.Core.Runtime;
-using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     internal sealed class GenericNetTypeIdMap<T> {
