@@ -107,7 +107,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             entity.Set(new NetSynchronize {
                 netId = netId
             });
-            DeserializeEntityStateInto(buffer, entity, netId);
+            DeserializeInitialEntityState(buffer, entity, netId);
             PublisherDelay.EndDelay();
         }
         
@@ -123,7 +123,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             entity.Set(new NetSynchronize {
                 netId = netId
             });
-            DeserializeEntityStateInto(buffer, entity, netId);
+            DeserializeInitialEntityState(buffer, entity, netId);
             PublisherDelay.EndDelay();
         }
         
@@ -136,7 +136,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             NetSyncAPI.GetEntityFromNetId(netId).Destroy();
         }
 
-        private static void DeserializeEntityStateInto(ByteBuffer buffer, in Entity entity, ushort netId) {
+        private static void DeserializeInitialEntityState(ByteBuffer buffer, in Entity entity, ushort netId) {
             var isEnabled = buffer.ReadBool();
             var stateMaps = NetSyncModule.InternalSingleton.StateMaps;
             using var networkCompIdList = PoolingAPI.GetList<ushort>();

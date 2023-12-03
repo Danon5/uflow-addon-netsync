@@ -37,13 +37,11 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                         // no data should be sent
                         continue;
                     }
-                    // create entity with initial state
                     SendCreateEntityPacketToClient(client, entity, netId);
                     awarenessMaps.MakeClientAwareOf(client, netId);
                 }
                 else {
                     if (!awarenessMaps.ClientIsAwareOf(client, netId)) continue;
-                    // destroy entity
                     SendDestroyEntityPacketToClient(client, entity, netId);
                     awarenessMaps.MakeClientUnawareOf(client, netId);
                 }
