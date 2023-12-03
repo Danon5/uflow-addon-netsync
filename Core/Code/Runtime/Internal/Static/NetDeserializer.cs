@@ -124,7 +124,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 netId = netId
             });
             entity.Get<SceneEntityRef>().value.InvokeEntityEvents(); // Calls NetSynchronize added / enabled events
-            DeserializeEntityStateInto(buffer, entity, netId);
+            DeserializeEntityStateInto(buffer, entity, netId); 
+            // NetSceneEntity object shouldn't be enabled until it's been deserialized into
         }
         
         private static void DeserializeDestroyEntity(ByteBuffer buffer) {
@@ -138,11 +139,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         private static void DeserializeEntityStateInto(ByteBuffer buffer, in Entity entity, ushort netId) {
             var stateMaps = NetSyncModule.InternalSingleton.StateMaps;
+            using var networkCompIdList = PoolingAPI.GetList<ushort>();
             var componentCount = buffer.ReadByte();
             for (var i = 0; i < componentCount; i++) {
                 var compId = buffer.ReadUShort();
                 var varCount = buffer.ReadByte();
                 var componentMapFound = stateMaps.TryGetComponentStateMap(netId, out var componentStateMap);
+                networkCompIdList.Add(compId);
                 for (var j = 0; j < varCount; j++) {
                     var varId = buffer.ReadByte();
                     if (!componentMapFound) continue;
@@ -150,6 +153,20 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                     if (!varStateMap.TryGet(varId, out var netVar)) continue;
                     netVar.Deserialize(buffer);
                 }
+            }
+            using var typesToRemove = PoolingAPI.GetList<Type>();
+            using var localCompIdList = PoolingAPI.GetList<ushort>();
+            foreach (var componentType in entity.ComponentTypes) {
+                if (!NetTypeIdMaps.ComponentMap.TryGetNetworkIdFromType(componentType, out var compId)) continue;
+                localCompIdList.Add(compId);
+                if (networkCompIdList.Contains(compId)) continue;
+                typesToRemove.Add(componentType);
+            }
+            foreach (var type in typesToRemove)
+                entity.RemoveRaw(type);
+            foreach (var compId in networkCompIdList) {
+                if (!localCompIdList.Contains(compId))
+                    entity.SetRaw(NetTypeIdMaps.ComponentMap.GetTypeFromNetworkId(compId));
             }
         }
         

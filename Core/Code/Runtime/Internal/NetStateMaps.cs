@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using UFlow.Addon.ECS.Core.Runtime;
 using UFlow.Core.Runtime;
+using UnityEngine;
 using UnityEngine.Scripting;
 using DisposableExtensions = UFlow.Addon.ECS.Core.Runtime.DisposableExtensions;
 
@@ -84,7 +85,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool HasVarStateMap(ushort netId, ushort compId) => 
-            m_entityStateMap.TryGet(netId, out var componentStateMap) && componentStateMap.ContainsKey(compId);
+            m_entityStateMap.TryGet(netId, out var componentStateMap) && 
+            componentStateMap.TryGet(compId, out var varStateMap) && varStateMap != null;
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public VarStateMap GetVarStateMap(ushort netId, ushort compId) => 
@@ -121,6 +123,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 if (!entity.TryGet(out NetSynchronize netSynchronize)) return;
                 var netId = netSynchronize.netId;
                 var compId = NetTypeIdMaps.ComponentMap.GetNetworkIdFromType(typeof(T));
+                NetSyncModule.InternalSingleton.StateMaps.GetOrCreateComponentStateMap(netId).Add(compId, default);
                 component.InitializeNetVars(netId, compId);
             }
             
@@ -180,8 +183,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public sealed class ComponentStateMap : BaseStateMap<ushort, VarStateMap> {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public VarStateMap GetOrCreate(ushort key) {
-                if (TryGet(key, out var value))
+                if (TryGet(key, out var value)) {
+                    value ??= new VarStateMap();
                     return value;
+                }
                 value = new VarStateMap();
                 Add(key, value);
                 return value;

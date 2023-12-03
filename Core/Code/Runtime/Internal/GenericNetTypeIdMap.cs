@@ -52,6 +52,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ushort GetNetworkIdFromType(Type type) => m_typeToIdMap[type];
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryGetNetworkIdFromType(Type type, out ushort id) => m_typeToIdMap.TryGetValue(type, out id);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryGetNetworkTypeFromId(ushort id, out Type type) => m_idToTypeMap.TryGetValue(id, out type);
+
         public void RegisterNetworkHash(ulong hash, ushort id) {
             var type = m_hashToTypeMap[hash];
             m_idToTypeMap[id] = type;

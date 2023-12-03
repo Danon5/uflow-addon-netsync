@@ -53,6 +53,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             buffer.Write((byte)componentStateMap.Count);
             foreach (var (compId, varStateMap) in componentStateMap.AsEnumerable()) {
                 buffer.Write(compId);
+                if (varStateMap == null) {
+                    buffer.Write((byte)0);
+                    continue;
+                }
                 buffer.Write((byte)varStateMap.Count);
                 foreach (var (varId, netVar) in varStateMap.AsEnumerable()) {
                     buffer.Write(varId);
