@@ -138,6 +138,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public abstract class BaseStateMap<TKey, TValue> {
             private readonly Dictionary<TKey, TValue> m_map = new();
 
+            public int Count => m_map.Count;
+
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public virtual void Add(TKey key, TValue value) => m_map.Add(key, value);
             

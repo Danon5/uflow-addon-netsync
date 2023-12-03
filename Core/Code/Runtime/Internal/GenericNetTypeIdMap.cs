@@ -57,7 +57,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             m_idToTypeMap[id] = type;
             m_typeToIdMap[type] = id;
 #if UFLOW_DEBUG_ENABLED
-            Debug.Log($"Registered {typeof(T).Name}. Type: {GetTypeFromNetworkId(id).Name}, Hash: {hash}, Id: {id}");
+            UFlowDebug.LogMessage($"Registered {typeof(T).Name}. Type: {GetTypeFromNetworkId(id).Name}, Hash: {hash}, Id: {id}");
 #endif
         }
         

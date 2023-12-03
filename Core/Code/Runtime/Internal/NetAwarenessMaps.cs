@@ -84,17 +84,26 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             private readonly HashSet<TId> m_hashSet = new();
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool ClientIsAwareOf(TId id) => m_hashSet.Contains(id);
+            public virtual bool ClientIsAwareOf(TId id) => m_hashSet.Contains(id);
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool MakeClientAwareOf(TId id) => m_hashSet.Add(id);
+            public virtual bool MakeClientAwareOf(TId id) => m_hashSet.Add(id);
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool MakeClientUnawareOf(TId id) => m_hashSet.Remove(id);
+            public virtual bool MakeClientUnawareOf(TId id) => m_hashSet.Remove(id);
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public virtual void RemoveAllAwareness() => m_hashSet.Clear();
         }
         
         public sealed class EntityAwarenessMap : BaseAwarenessMap<ushort> {
             private readonly Dictionary<ushort, ComponentAwarenessMap> m_componentAwarenessMaps = new();
+
+            public override bool MakeClientUnawareOf(ushort id) {
+                if (m_componentAwarenessMaps.TryGetValue(id, out var componentAwarenessMap))
+                    componentAwarenessMap.Clear();
+                return base.MakeClientUnawareOf(id);
+            }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public ComponentAwarenessMap GetComponentAwarenessMap(ushort netId) => 
@@ -112,10 +121,23 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 m_componentAwarenessMaps.Add(netId, componentAwarenessMap);
                 return componentAwarenessMap;
             }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Clear() {
+                foreach (var (_, componentAwarenessMap) in m_componentAwarenessMaps) 
+                    componentAwarenessMap.Clear();
+                RemoveAllAwareness();
+            }
         }
 
         public sealed class ComponentAwarenessMap : BaseAwarenessMap<ushort> {
             private readonly Dictionary<ushort, VarAwarenessMap> m_varAwarenessMaps = new();
+
+            public override bool MakeClientUnawareOf(ushort id) {
+                if (m_varAwarenessMaps.TryGetValue(id, out var varAwarenessMap))
+                    varAwarenessMap.Clear();
+                return base.MakeClientUnawareOf(id);
+            }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public VarAwarenessMap GetVarAwarenessMap(ushort compId) => 
@@ -133,8 +155,18 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 m_varAwarenessMaps.Add(compId, componentAwarenessMap);
                 return componentAwarenessMap;
             }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Clear() {
+                foreach (var (_, varAwarenessMap) in m_varAwarenessMaps)
+                    varAwarenessMap.Clear();
+                m_varAwarenessMaps.Clear();
+            }
         }
 
-        public sealed class VarAwarenessMap : BaseAwarenessMap<byte> { }
+        public sealed class VarAwarenessMap : BaseAwarenessMap<byte> {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Clear() => RemoveAllAwareness();
+        }
     }
 }
