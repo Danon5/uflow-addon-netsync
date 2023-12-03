@@ -34,19 +34,30 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         public static void SerializeCreateEntity(ByteBuffer buffer, ushort netId) {
             buffer.Write(netId);
-            // serialize component hashes
-            // serialize var values for each hash
+            //SerializeEntityState(buffer, netId);
         }
         
         public static void SerializeCreateSceneEntity(ByteBuffer buffer, ushort netId, ushort prefabId) {
             buffer.Write(netId);
             buffer.Write(prefabId);
-            // serialize component hashes
-            // serialize var values for each hash
+            //SerializeEntityState(buffer, netId);
         }
         
         public static void SerializeDestroyEntity(ByteBuffer buffer, ushort netId) {
             buffer.Write(netId);
+        }
+
+        private static void SerializeEntityState(ByteBuffer buffer, ushort netId) {
+            var stateMaps = NetSyncModule.InternalSingleton.StateMaps;
+            if (!stateMaps.TryGetComponentStateMap(netId, out var componentStateMap)) return;
+            buffer.Write((byte)componentStateMap.Count);
+            foreach (var (compId, varStateMap) in componentStateMap.AsEnumerable()) {
+                buffer.Write(compId);
+                buffer.Write((byte)varStateMap.Count);
+                foreach (var (varId, netVar) in varStateMap.AsEnumerable()) {
+                    
+                }
+            }
         }
     }
 }

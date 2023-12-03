@@ -34,7 +34,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #if UNITY_EDITOR
             EditorApplication.delayCall += FullRefreshEditorOnly;
 #else
-            RefreshGuidMap();
+            RefreshLocalHashMap();
 #endif
         }
         

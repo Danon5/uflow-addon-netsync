@@ -106,6 +106,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             entity.SetWithoutEvents(new NetSynchronize {
                 netId = netId
             });
+            DeserializeEntityStateInto(buffer, entity);
             NetSyncModule.InternalSingleton.World.InvokeEntityCreationEvents(entity);
             entity.InvokeAddedEvents<NetSynchronize>();
             entity.InvokeEnabledEvents<NetSynchronize>();
@@ -122,7 +123,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             entity.SetWithoutEvents(new NetSynchronize {
                 netId = netId
             });
-            entity.Get<SceneEntityRef>().value.InvokeEntityEvents();
+            DeserializeEntityStateInto(buffer, entity);
+            entity.Get<SceneEntityRef>().value.InvokeEntityEvents(); // Calls NetSynchronize added / enabled events
         }
         
         private static void DeserializeDestroyEntity(ByteBuffer buffer) {
@@ -134,6 +136,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             NetSyncAPI.GetEntityFromNetId(netId).Destroy();
         }
 
+        private static void DeserializeEntityStateInto(ByteBuffer buffer, in Entity entity) {
+            
+        }
+        
         private delegate void DeserializeRpcDelegate(ByteBuffer buffer, NetPeer peer);
 
         internal static class RpcDeserializer<T> where T : INetRpc {
