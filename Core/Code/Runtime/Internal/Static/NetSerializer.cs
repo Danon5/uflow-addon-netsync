@@ -50,6 +50,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         private static void SerializeEntityState(ByteBuffer buffer, in Entity entity, ushort netId) {
+            buffer.Write(entity.IsEnabled());
             var stateMaps = NetSyncModule.InternalSingleton.StateMaps;
             if (!stateMaps.TryGetComponentStateMap(netId, out var componentStateMap)) return;
             buffer.Write((byte)componentStateMap.Count);

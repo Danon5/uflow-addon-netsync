@@ -103,16 +103,15 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             DebugAPI.LogMessage($"Deserializing {NetPacketType.CreateEntity}. NetID: {netId}");
 #endif
             if (NetSyncModule.InternalSingleton == null) return;
-            var entity = NetSyncModule.InternalSingleton.World.CreateEntityWithoutEvents();
-            entity.SetWithoutEvents(new NetSynchronize {
+            PublisherDelay.StartDelay();
+            var entity = NetSyncModule.InternalSingleton.World.CreateEntity();
+            entity.Set(new NetSynchronize {
                 netId = netId
             });
             DeserializeEntityStateInto(buffer, entity, netId);
-            NetSyncModule.InternalSingleton.World.InvokeEntityCreationEvents(entity);
-            entity.InvokeAddedEvents<NetSynchronize>();
-            entity.InvokeEnabledEvents<NetSynchronize>();
+            PublisherDelay.EndDelay();
         }
-
+        
         private static void DeserializeCreateSceneEntity(ByteBuffer buffer) {
             var netId = buffer.ReadUShort();
             var prefabId = buffer.ReadUShort();
@@ -120,13 +119,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             DebugAPI.LogMessage($"Deserializing {NetPacketType.CreateSceneEntity}. NetID: {netId}, PrefabID: {prefabId}");
 #endif
             if (NetSyncModule.InternalSingleton == null) return;
-            var entity = NetSyncPrefabCache.Get().GetPrefabFromNetworkId(prefabId).Instantiate().AsEntityWithoutEvents();
-            entity.SetWithoutEvents(new NetSynchronize {
+            PublisherDelay.StartDelay();
+            var entity = NetSyncPrefabCache.Get().GetPrefabFromNetworkId(prefabId).Instantiate().AsEntity();
+            entity.Set(new NetSynchronize {
                 netId = netId
             });
-            entity.Get<SceneEntityRef>().value.InvokeEntityEvents(); // Calls NetSynchronize added / enabled events
-            DeserializeEntityStateInto(buffer, entity, netId); 
-            // NetSceneEntity object shouldn't be enabled until it's been deserialized into
+            DeserializeEntityStateInto(buffer, entity, netId);
+            PublisherDelay.EndDelay();
         }
         
         private static void DeserializeDestroyEntity(ByteBuffer buffer) {
@@ -139,6 +138,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         private static void DeserializeEntityStateInto(ByteBuffer buffer, in Entity entity, ushort netId) {
+            var isEnabled = buffer.ReadBool();
             var stateMaps = NetSyncModule.InternalSingleton.StateMaps;
             using var networkCompIdList = PoolingAPI.GetList<ushort>();
             using var networkCompEnabledList = PoolingAPI.GetList<bool>();
@@ -168,13 +168,14 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
             foreach (var type in typesToRemove)
                 entity.RemoveRaw(type);
-            for (var i = 0; i < networkCompIdList.Count; i++) {
+            for (var i = 0; i < componentCount; i++) {
                 var compId = networkCompIdList[i];
                 var componentType = NetTypeIdMaps.ComponentMap.GetTypeFromNetworkId(compId);
                 if (!localCompIdList.Contains(compId))
                     entity.SetRaw(componentType);
                 entity.SetEnabledRaw(componentType, networkCompEnabledList[i]);
             }
+            entity.SetEnabled(isEnabled);
         }
         
         private delegate void DeserializeRpcDelegate(ByteBuffer buffer, NetPeer peer);
