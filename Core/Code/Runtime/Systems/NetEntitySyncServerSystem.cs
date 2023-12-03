@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Runtime.CompilerServices;
 using UFlow.Addon.ECS.Core.Runtime;
 using UFlow.Core.Runtime;
 using UnityEngine.Scripting;
@@ -8,9 +9,17 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
     [ExecuteInWorld(typeof(NetWorld))]
     [ExecuteInGroup(typeof(PostTickSystemGroup))]
     [ExecuteOnServer]
-    public sealed class NetEntitySyncServerSystem : BaseSetIterationCallbackSystem {
-        public NetEntitySyncServerSystem(in World world) : base(in world, world.BuildQuery()
+    public sealed class NetEntitySyncServerSystem : BaseSetIterationSystem {
+        private IDisposable m_netSynchronizeRemovedSubscription;
+        
+        public NetEntitySyncServerSystem(in World world) : base(in world, world.BuildQuery(
+                QueryEnabledFlags.Enabled | QueryEnabledFlags.Disabled)
             .With<NetSynchronize>()) { }
+
+        protected override void Setup(World world) => m_netSynchronizeRemovedSubscription =
+            world.SubscribeEntityComponentRemoved<NetSynchronize>(OnNetSynchronizeRemoved);
+
+        protected override void Cleanup(World world) => m_netSynchronizeRemovedSubscription?.Dispose();
 
         protected override void IterateEntity(World world, in Entity entity) {
             ref var netSynchronize = ref entity.Get<NetSynchronize>();
@@ -29,33 +38,31 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                         continue;
                     }
                     // create entity with initial state
-                    SendCreateEntityPacketToClient(client, entity);
+                    SendCreateEntityPacketToClient(client, entity, netId);
                     awarenessMaps.MakeClientAwareOf(client, netId);
                 }
                 else {
                     if (!awarenessMaps.ClientIsAwareOf(client, netId)) continue;
                     // destroy entity
-                    SendDestroyEntityPacketToClient(client, entity);
+                    SendDestroyEntityPacketToClient(client, entity, netId);
                     awarenessMaps.MakeClientUnawareOf(client, netId);
                 }
             }
         }
 
-        protected override void EntityRemoved(World world, in Entity entity) {
-            ref var netSynchronize = ref entity.Get<NetSynchronize>();
+        private static void OnNetSynchronizeRemoved(in Entity entity, in NetSynchronize netSynchronize) {
+            var netId = netSynchronize.netId;
             var netSyncModule = NetSyncModule.InternalSingleton;
             var awarenessMaps = netSyncModule.ServerAwarenessMaps;
             foreach (var client in NetSyncAPI.ServerAPI.GetClientsEnumerable()) {
                 if (NetSyncAPI.ServerAPI.IsHostClient(client)) continue;
-                if (!awarenessMaps.ClientIsAwareOf(client, netSynchronize.netId)) continue;
-                SendDestroyEntityPacketToClient(client, entity);
-                awarenessMaps.MakeClientUnawareOf(client, netSynchronize.netId);
+                if (!awarenessMaps.ClientIsAwareOf(client, netId)) continue;
+                SendDestroyEntityPacketToClient(client, entity, netId);
+                awarenessMaps.MakeClientUnawareOf(client, netId);
             }
         }
 
-        private static void SendCreateEntityPacketToClient(NetClient client, in Entity entity) {
-            ref var netSynchronize = ref entity.Get<NetSynchronize>();
-            var netId = netSynchronize.netId;
+        private static void SendCreateEntityPacketToClient(NetClient client, in Entity entity, ushort netId) {
             var isSceneEntity = entity.TryGet(out SceneEntityRef sceneEntityRef);
             var netSyncModule = NetSyncModule.InternalSingleton;
             if (isSceneEntity) {
@@ -78,9 +85,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             netSyncModule.Transport.SendBufferPayloadToClient(client);
         }
 
-        private static void SendDestroyEntityPacketToClient(NetClient client, in Entity entity) {
-            ref var netSynchronize = ref entity.Get<NetSynchronize>();
-            var netId = netSynchronize.netId;
+        private static void SendDestroyEntityPacketToClient(NetClient client, in Entity entity, ushort netId) {
             var netSyncModule = NetSyncModule.InternalSingleton;
             netSyncModule.Transport.BeginWrite(NetPacketType.DestroyEntity);
             NetSerializer.SerializeDestroyEntity(netSyncModule.Transport.Buffer, netId);
