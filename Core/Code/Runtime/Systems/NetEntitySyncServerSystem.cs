@@ -23,6 +23,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                     if (awarenessMaps.ClientIsAwareOf(client, netId)) {
                         // send state deltas since client is already aware of entity
                         // TrySendStateDelta(client, netId);
+                        // also needs to check if the client should be aware of each component and NetVar
+                        // not being aware of a component means that it should be removed, but not being aware of a NetVar just means
+                        // no data should be sent
                         continue;
                     }
                     // create entity with initial state
@@ -58,7 +61,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (isSceneEntity) {
                 var prefabId = NetSyncPrefabCache.Get().GetNetworkIdFromGuid(sceneEntityRef.value.Guid);
                 netSyncModule.Transport.BeginWrite(NetPacketType.CreateSceneEntity);
-                NetSerializer.SerializeCreateSceneEntity(netSyncModule.Transport.Buffer, netId, prefabId);
+                NetSerializer.SerializeCreateSceneEntity(netSyncModule.Transport.Buffer, entity, netId, prefabId);
 #if UFLOW_DEBUG_ENABLED
                 DebugAPI.LogMessage($"Server sending packet. Type: {NetPacketType.CreateSceneEntity}, " +
                     $"ClientID: {client.id}, NetID: {netId}, PrefabID: {prefabId}");
@@ -66,7 +69,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
             else {
                 netSyncModule.Transport.BeginWrite(NetPacketType.CreateEntity);
-                NetSerializer.SerializeCreateEntity(netSyncModule.Transport.Buffer, netId);
+                NetSerializer.SerializeCreateEntity(netSyncModule.Transport.Buffer, entity, netId);
 #if UFLOW_DEBUG_ENABLED
                 DebugAPI.LogMessage($"Server sending packet. Type: {NetPacketType.CreateEntity}, ClientID: {client.id}, NetID: {netId}");
 #endif

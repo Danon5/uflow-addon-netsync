@@ -1,4 +1,6 @@
-﻿using UFlow.Addon.Serialization.Core.Runtime;
+﻿using UFlow.Addon.ECS.Core.Runtime;
+using UFlow.Addon.Serialization.Core.Runtime;
+using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     internal static class NetSerializer {
@@ -32,33 +34,32 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             SerializationAPI.Serialize(buffer, ref rpc);
         }
 
-        public static void SerializeCreateEntity(ByteBuffer buffer, ushort netId) {
+        public static void SerializeCreateEntity(ByteBuffer buffer, in Entity entity, ushort netId) {
             buffer.Write(netId);
-            SerializeEntityState(buffer, netId);
+            SerializeEntityState(buffer, entity, netId);
         }
         
-        public static void SerializeCreateSceneEntity(ByteBuffer buffer, ushort netId, ushort prefabId) {
+        public static void SerializeCreateSceneEntity(ByteBuffer buffer, in Entity entity, ushort netId, ushort prefabId) {
             buffer.Write(netId);
             buffer.Write(prefabId);
-            SerializeEntityState(buffer, netId);
+            SerializeEntityState(buffer, entity, netId);
         }
         
         public static void SerializeDestroyEntity(ByteBuffer buffer, ushort netId) {
             buffer.Write(netId);
         }
 
-        private static void SerializeEntityState(ByteBuffer buffer, ushort netId) {
+        private static void SerializeEntityState(ByteBuffer buffer, in Entity entity, ushort netId) {
             var stateMaps = NetSyncModule.InternalSingleton.StateMaps;
             if (!stateMaps.TryGetComponentStateMap(netId, out var componentStateMap)) return;
             buffer.Write((byte)componentStateMap.Count);
-            foreach (var (compId, varStateMap) in componentStateMap.AsEnumerable()) {
+            foreach (var (compId, componentState) in componentStateMap.AsEnumerable()) {
                 buffer.Write(compId);
-                if (varStateMap == null) {
-                    buffer.Write((byte)0);
-                    continue;
-                }
-                buffer.Write((byte)varStateMap.Count);
-                foreach (var (varId, netVar) in varStateMap.AsEnumerable()) {
+                var componentType = NetTypeIdMaps.ComponentMap.GetTypeFromNetworkId(compId);
+                var enabled = entity.IsEnabledRaw(componentType);
+                buffer.Write(enabled);
+                buffer.Write((byte)componentState.Count);
+                foreach (var (varId, netVar) in componentState.AsEnumerable()) {
                     buffer.Write(varId);
                     netVar.Serialize(buffer);
                 }

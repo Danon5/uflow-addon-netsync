@@ -53,7 +53,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             m_netId = netId;
             m_varId = varId;
             m_interpolate = interpolate && IsValidInterpolateType;
-            NetSyncModule.InternalSingleton.StateMaps.GetOrCreateVarStateMap(netId, compId).Add(varId, this);
+            NetSyncModule.InternalSingleton.StateMaps.GetOrCreateComponentState(netId, compId).Add(varId, this);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

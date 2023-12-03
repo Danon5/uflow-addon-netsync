@@ -83,31 +83,30 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool HasVarStateMap(ushort netId, ushort compId) => 
-            m_entityStateMap.TryGet(netId, out var componentStateMap) && 
-            componentStateMap.TryGet(compId, out var varStateMap) && varStateMap != null;
+        public bool HasComponentState(ushort netId, ushort compId) => 
+            m_entityStateMap.TryGet(netId, out var componentStateMap) && componentStateMap.ContainsKey(compId);
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public VarStateMap GetVarStateMap(ushort netId, ushort compId) => 
+        public ComponentState GetComponentState(ushort netId, ushort compId) => 
             GetComponentStateMap(netId).Get(compId);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public VarStateMap GetOrCreateVarStateMap(ushort netId, ushort compId) => 
+        public ComponentState GetOrCreateComponentState(ushort netId, ushort compId) => 
             GetOrCreateComponentStateMap(netId).GetOrCreate(compId);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryGetVarStateMap(ushort netId, ushort compId, out VarStateMap varStateMap) {
-            if (!HasVarStateMap(netId, compId)) {
-                varStateMap = default;
+        public bool TryGetComponentState(ushort netId, ushort compId, out ComponentState componentState) {
+            if (!HasComponentState(netId, compId)) {
+                componentState = default;
                 return false;
             }
-            varStateMap = GetVarStateMap(netId, compId);
+            componentState = GetComponentState(netId, compId);
             return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public INetVar GetVar(ushort netId, ushort compId, byte varId) => 
-            GetVarStateMap(netId, compId).Get(varId);
+            GetComponentState(netId, compId).Get(varId);
 
         public void Clear() {
             m_entityMap.Clear();
@@ -122,7 +121,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 if (!entity.TryGet(out NetSynchronize netSynchronize)) return;
                 var netId = netSynchronize.netId;
                 var compId = NetTypeIdMaps.ComponentMap.GetNetworkIdFromType(typeof(T));
-                NetSyncModule.InternalSingleton.StateMaps.GetOrCreateComponentStateMap(netId).Add(compId, default);
+                NetSyncModule.InternalSingleton.StateMaps.GetOrCreateComponentStateMap(netId).GetOrCreate(compId);
                 component.InitializeNetVars(netId, compId);
             }
             
@@ -179,19 +178,17 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
         }
 
-        public sealed class ComponentStateMap : BaseStateMap<ushort, VarStateMap> {
+        public sealed class ComponentStateMap : BaseStateMap<ushort, ComponentState> {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public VarStateMap GetOrCreate(ushort key) {
-                if (TryGet(key, out var value)) {
-                    value ??= new VarStateMap();
+            public ComponentState GetOrCreate(ushort key) {
+                if (TryGet(key, out var value))
                     return value;
-                }
-                value = new VarStateMap();
+                value = new ComponentState();
                 Add(key, value);
                 return value;
             }
         }
-        
-        public sealed class VarStateMap : BaseStateMap<byte, INetVar> { }
+
+        public sealed class ComponentState : BaseStateMap<byte, INetVar> { }
     }
 }
