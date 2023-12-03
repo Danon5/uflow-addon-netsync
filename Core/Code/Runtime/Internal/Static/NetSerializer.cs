@@ -55,9 +55,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             if (!stateMaps.TryGetComponentStateMap(netId, out var componentStateMap)) return;
             buffer.Write((byte)componentStateMap.Count);
             foreach (var (compId, componentState) in componentStateMap.AsEnumerable()) {
-                buffer.Write(compId);
                 var componentType = NetTypeIdMaps.ComponentMap.GetTypeFromNetworkId(compId);
                 var enabled = entity.IsEnabledRaw(componentType);
+                Debug.Log($"Writing {enabled} on {componentType.Name}");
+                buffer.Write(compId);
                 buffer.Write(enabled);
                 buffer.Write((byte)componentState.Count);
                 foreach (var (varId, netVar) in componentState.AsEnumerable()) {

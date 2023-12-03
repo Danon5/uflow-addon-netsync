@@ -145,8 +145,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             var componentCount = buffer.ReadByte();
             for (var i = 0; i < componentCount; i++) {
                 var compId = buffer.ReadUShort();
-                var varCount = buffer.ReadByte();
                 var enabled = buffer.ReadBool();
+                var varCount = buffer.ReadByte();
                 var componentMapFound = stateMaps.TryGetComponentStateMap(netId, out var componentStateMap);
                 networkCompIdList.Add(compId);
                 networkCompEnabledList.Add(enabled);
@@ -173,6 +173,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 var componentType = NetTypeIdMaps.ComponentMap.GetTypeFromNetworkId(compId);
                 if (!localCompIdList.Contains(compId))
                     entity.SetRaw(componentType);
+                Debug.Log($"Reading {networkCompEnabledList[i]} on {componentType.Name}");
                 entity.SetEnabledRaw(componentType, networkCompEnabledList[i]);
             }
             entity.SetEnabled(isEnabled);
