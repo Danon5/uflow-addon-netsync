@@ -4,6 +4,7 @@ using LiteNetLib;
 using UFlow.Addon.ECS.Core.Runtime;
 using UFlow.Addon.Serialization.Core.Runtime;
 using UFlow.Core.Runtime;
+using UnityEngine.Pool;
 using UnityEngine.Scripting;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
@@ -139,8 +140,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         private static void DeserializeInitialEntityState(ByteBuffer buffer, in Entity entity, ushort netId) {
             var isEnabled = buffer.ReadBool();
             var stateMaps = NetSyncModule.InternalSingleton.StateMaps;
-            using var networkCompIdList = PoolingAPI.GetList<ushort>();
-            using var networkCompEnabledList = PoolingAPI.GetList<bool>();
+            using var _1 = PoolingAPI.Checkout<List<ushort>>(out var networkCompIdList);
+            using var _2 = PoolingAPI.Checkout<List<bool>>(out var networkCompEnabledList);
             var componentCount = buffer.ReadByte();
             for (var i = 0; i < componentCount; i++) {
                 var compId = buffer.ReadUShort();
@@ -157,8 +158,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                     netVar.Deserialize(buffer);
                 }
             }
-            using var typesToRemove = PoolingAPI.GetList<Type>();
-            using var localCompIdList = PoolingAPI.GetList<ushort>();
+            using var _3 = PoolingAPI.Checkout<List<Type>>(out var typesToRemove);
+            using var _4 = PoolingAPI.Checkout<List<ushort>>(out var localCompIdList);
             foreach (var componentType in entity.ComponentTypes) {
                 if (!NetTypeIdMaps.ComponentMap.TryGetNetworkIdFromType(componentType, out var compId)) continue;
                 localCompIdList.Add(compId);
