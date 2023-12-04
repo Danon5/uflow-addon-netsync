@@ -48,16 +48,10 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public T Get() => m_value;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void INetVar.Serialize(ByteBuffer buffer) {
-            SerializationAPI.Serialize(buffer, ref m_value);
-            DebugAPI.LogMessage($"Serializing {m_value}");
-        }
+        void INetVar.Serialize(ByteBuffer buffer) => SerializationAPI.Serialize(buffer, ref m_value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void INetVar.Deserialize(ByteBuffer buffer) {
-            SerializationAPI.DeserializeInto(buffer, ref m_value);
-            DebugAPI.LogMessage($"Deserializing {m_value}");
-        }
+        void INetVar.Deserialize(ByteBuffer buffer) => SerializationAPI.DeserializeInto(buffer, ref m_value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void INetVar.ResetIsDirty() {
