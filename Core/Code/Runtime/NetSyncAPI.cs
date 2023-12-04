@@ -53,7 +53,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
 
             public static void UnsubscribeStateChanged(Action<ConnectionState> action) {
-                NetSyncModule.ThrowIfNotLoaded();
+                if (NetSyncModule.InternalSingleton == null) return;
                 NetSyncModule.InternalSingleton.Transport.ServerStateChangedEvent -= action;
             }
 
@@ -63,7 +63,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
 
             public static void UnsubscribeClientAuthorized(Action<NetClient> action) {
-                NetSyncModule.ThrowIfNotLoaded();
+                if (NetSyncModule.InternalSingleton == null) return;
                 NetSyncModule.InternalSingleton.Transport.ServerClientAuthorizedEvent -= action;
             }
 
@@ -73,7 +73,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
 
             public static void UnsubscribeClientDisconnected(Action<NetClient> action) {
-                NetSyncModule.ThrowIfNotLoaded();
+                if (NetSyncModule.InternalSingleton == null) return;
                 NetSyncModule.InternalSingleton.Transport.ServerClientDisconnectedEvent -= action;
             }
 
@@ -159,7 +159,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
 
             public static void UnsubscribeStateChanged(Action<ConnectionState> action) {
-                NetSyncModule.ThrowIfNotLoaded();
+                if (NetSyncModule.InternalSingleton == null) return;
                 NetSyncModule.InternalSingleton.Transport.ClientStateChangedEvent -= action;
             }
 
@@ -169,7 +169,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
 
             public static void UnsubscribeDisconnected(Action<DisconnectionType> action) {
-                NetSyncModule.ThrowIfNotLoaded();
+                if (NetSyncModule.InternalSingleton == null) return;
                 NetSyncModule.InternalSingleton.Transport.ClientDisconnectedEvent -= action;
             }
             
@@ -215,7 +215,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
 
             public static void UnsubscribeStateChanged(Action<ConnectionState> action) {
-                NetSyncModule.ThrowIfNotLoaded();
+                if (NetSyncModule.InternalSingleton == null) return;
                 NetSyncModule.InternalSingleton.Transport.HostStateChangedEvent -= action;
             }
 

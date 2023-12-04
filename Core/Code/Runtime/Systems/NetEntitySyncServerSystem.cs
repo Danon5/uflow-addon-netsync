@@ -9,34 +9,35 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
     [ExecuteInWorld(typeof(NetWorld))]
     [ExecuteInGroup(typeof(PostTickSystemGroup))]
     [ExecuteOnServer]
-    public sealed class NetEntitySyncServerSystem : BaseSetIterationSystem {
+    public sealed class NetEntitySyncServerSystem : BaseSystem {
+        private readonly DynamicEntitySet m_netSynchronizeSet;
         private IDisposable m_netSynchronizeRemovedSubscription;
-        
-        public NetEntitySyncServerSystem(in World world) : base(in world, world.BuildQuery(
-                QueryEnabledFlags.Enabled | QueryEnabledFlags.Disabled)
-            .With<NetSynchronize>()) { }
 
-        protected override void Setup(World world) => m_netSynchronizeRemovedSubscription =
-            world.SubscribeEntityComponentRemoved<NetSynchronize>(OnNetSynchronizeRemoved);
+        public NetEntitySyncServerSystem(in World world) : base(in world) {
+            m_netSynchronizeSet = world.BuildQuery(QueryEnabledFlags.Enabled | QueryEnabledFlags.Disabled)
+                .With<NetSynchronize>().AsSet();
+        }
 
-        protected override void Cleanup(World world) => m_netSynchronizeRemovedSubscription?.Dispose();
+        protected override void Setup(World world) {
+            NetSyncAPI.ServerAPI.SubscribeClientAuthorized(OnClientAuthorized);
+            m_netSynchronizeRemovedSubscription = world.SubscribeEntityComponentRemoved<NetSynchronize>(OnNetSynchronizeRemoved);
+        }
 
-        protected override void IterateEntity(World world, in Entity entity) {
-            ref var netSynchronize = ref entity.Get<NetSynchronize>();
-            var netId = netSynchronize.netId;
-            var netSyncModule = NetSyncModule.InternalSingleton;
-            var awarenessMaps = netSyncModule.ServerAwarenessMaps;
-            foreach (var client in NetSyncAPI.ServerAPI.GetClientsEnumerable()) {
+        protected override void Cleanup(World world) {
+            NetSyncAPI.ServerAPI.UnsubscribeClientAuthorized(OnClientAuthorized);
+            m_netSynchronizeRemovedSubscription?.Dispose();
+            m_netSynchronizeSet.Dispose();
+        }
+
+        private void OnClientAuthorized(NetClient client) {
+            foreach (var entity in m_netSynchronizeSet) {
+                ref var netSynchronize = ref entity.Get<NetSynchronize>();
+                var netId = netSynchronize.netId;
+                var netSyncModule = NetSyncModule.InternalSingleton;
+                var awarenessMaps = netSyncModule.ServerAwarenessMaps;
                 if (NetSyncAPI.ServerAPI.IsHostClient(client)) continue;
                 if (ClientShouldBeAwareOf(client, netId)) {
-                    if (awarenessMaps.ClientIsAwareOf(client, netId)) {
-                        // send state deltas since client is already aware of entity
-                        // TrySendStateDelta(client, netId);
-                        // also needs to check if the client should be aware of each component and NetVar
-                        // not being aware of a component means that it should be removed, but not being aware of a NetVar just means
-                        // no data should be sent
-                        continue;
-                    }
+                    if (awarenessMaps.ClientIsAwareOf(client, netId)) continue;
                     SendCreateEntityPacketToClient(client, entity, netId);
                     awarenessMaps.MakeClientAwareOf(client, netId);
                 }
