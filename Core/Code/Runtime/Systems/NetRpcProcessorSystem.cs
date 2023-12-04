@@ -5,7 +5,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
     [Preserve]
     [ExecuteInWorld(typeof(NetWorld))]
     [ExecuteInGroup(typeof(PreTickSystemGroup))]
-    [ExecuteAfter(typeof(NetEventPollSystem))]
+    [ExecuteAfter(typeof(NetEventPollSystem), typeof(NetEntitySpawnerServerSystem))]
     public sealed class NetRpcProcessorSystem : BaseRunSystem {
         public NetRpcProcessorSystem(in World world) : base(in world) { }
 

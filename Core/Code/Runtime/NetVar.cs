@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Sirenix.OdinInspector;
 using UFlow.Addon.Serialization.Core.Runtime;
-using UFlow.Core.Runtime;
 using UnityEngine;
 
 // ReSharper disable StaticMemberInGenericType

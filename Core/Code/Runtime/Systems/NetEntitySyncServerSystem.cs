@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
 using UFlow.Addon.ECS.Core.Runtime;
 using UFlow.Core.Runtime;
 using UnityEngine.Scripting;
@@ -28,8 +27,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         // Delta state
         protected override void IterateEntity(World world, in Entity entity) {
-            var netSyncModule = NetSyncModule.InternalSingleton;
-            var awarenessMaps = netSyncModule.ServerAwarenessMaps;
+            var awarenessMaps = NetSyncModule.InternalSingleton.ServerAwarenessMaps;
             foreach (var client in NetSyncAPI.ServerAPI.GetClientsEnumerable()) {
                 if (NetSyncAPI.ServerAPI.IsHostClient(client)) continue;
                 ref var netSynchronize = ref entity.Get<NetSynchronize>();
@@ -42,8 +40,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                     awarenessMaps.MakeClientAwareOf(client, netId);
                 }
             }
-            netSyncModule.StateMaps.ResetDeltas();
         }
+
+        protected override void PostIterate(World world) => NetSyncModule.InternalSingleton.StateMaps.ResetDeltas();
 
         // Initial state
         private void OnClientAuthorized(NetClient client) {

@@ -1,8 +1,11 @@
-﻿using UFlow.Addon.ECS.Core.Runtime;
+﻿using System;
+using UFlow.Addon.ECS.Core.Runtime;
 using UFlow.Core.Runtime;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     public sealed class NetSceneEntity : SceneEntity {
+        private bool m_shouldEnableAfterSpawn;
+        
         public override World GetWorld() => EcsModule<NetWorld>.Get().World;
 
         protected override void Awake() {
@@ -14,10 +17,34 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 return;
             }
             Initialize(NetSyncAPI.IsServer);
+            if (NetSyncAPI.IsServer)
+                NetSyncModule.InternalSingleton.serverSpawnQueue.Enqueue(this);
         }
 
-        public override Entity CreateEntity() => NetSyncAPI.NetworkInitialized ? base.CreateEntity() : default;
+        public override Entity CreateEntity() {
+            if (!NetSyncAPI.NetworkInitialized) return default;
+            if (NetSyncAPI.IsServer) {
+                if (World == null)
+                    throw new Exception("Attempting to create a SceneEntity with no valid world.");
+                if (Entity.IsAlive())
+                    throw new Exception("Attempting to create a SceneEntity multiple times.");
+                m_shouldEnableAfterSpawn = EnabledInInspector;
+                Entity = World.CreateEntity(false);
+                AddSpecialComponentsBeforeBaking();
+                gameObject.SetActive(false);
+                return Entity;
+            }
+            return base.CreateEntity();
+        }
 
+        internal void ServerSpawn() {
+            BakeAuthoringComponents();
+            Entity.SetEnabled(m_shouldEnableAfterSpawn);
+            gameObject.SetActive(m_shouldEnableAfterSpawn);
+            if (!IsValidPrefab) return;
+            LogicHook<PrefabSceneEntityCreatedHook>.Execute(new PrefabSceneEntityCreatedHook(this));
+        }
+        
         protected override void AddSpecialComponentsBeforeBaking() {
             base.AddSpecialComponentsBeforeBaking();
             if (!NetSyncAPI.IsServer) return;

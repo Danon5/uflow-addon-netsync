@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UFlow.Addon.ECS.Core.Runtime;
 using UFlow.Core.Runtime;
@@ -6,6 +7,7 @@ using UnityEngine;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
     public sealed class NetSyncModule : BaseAsyncBehaviourModule<NetSyncModule> {
+        internal readonly Queue<NetSceneEntity> serverSpawnQueue = new();
         private float m_tickRolloverDelta;
 
         public int TickRate { get; set; } = 60;
@@ -13,6 +15,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public int MaxRolloverTicks { get; set; } = 3;
         public bool EnableStatistics { get; set; }
         public int Tick { get; private set; }
+        public float NetworkTime { get; private set; }
         public World World { get; private set; }
         internal static NetSyncModule InternalSingleton { get; private set; }
         internal LiteNetLibTransport Transport { get; }
@@ -25,6 +28,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             ServerAwarenessMaps = new NetAwarenessMaps();
             StateMaps = new NetStateMaps();
             NetServerIdStack = new UShortIdStack(1);
+            Application.runInBackground = true;
         }
 
         public override UniTask LoadDirectAsync() {
@@ -54,16 +58,17 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public override void Update() {
             if (!NetSyncAPI.NetworkInitialized) return;
             if (World == null) return;
-           EnsurePhysicsSimulationSettings();
+            EnsurePhysicsSimulationSettings();
             m_tickRolloverDelta += Time.deltaTime;
             var ticksExecuted = 0;
             while (m_tickRolloverDelta >= TickDelta) {
                 m_tickRolloverDelta -= TickDelta;
                 if (ticksExecuted > MaxRolloverTicks) continue;
-                World?.RunSystemGroup<PreTickSystemGroup>();
-                World?.RunSystemGroup<TickSystemGroup>();
+                NetworkTime += TickDelta;
+                World?.RunSystemGroup<PreTickSystemGroup>(TickDelta);
+                World?.RunSystemGroup<TickSystemGroup>(TickDelta);
                 Physics.Simulate(TickDelta);
-                World?.RunSystemGroup<PostTickSystemGroup>();
+                World?.RunSystemGroup<PostTickSystemGroup>(TickDelta);
                 ticksExecuted++;
                 Tick++;
             }
@@ -106,6 +111,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             ServerAwarenessMaps.Clear();
             StateMaps.Clear();
             NetServerIdStack.Reset();
+            NetworkTime = 0f;
+            m_tickRolloverDelta = 0f;
+            serverSpawnQueue.Clear();
         }
 
         private void ServerOnStateChanged(ConnectionState state) {

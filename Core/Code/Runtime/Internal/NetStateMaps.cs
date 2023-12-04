@@ -166,7 +166,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             [Preserve]
             public static void OnEntityComponentAdded(in Entity entity, ref T component) {
                 if (!TryGetIds(entity, out var netId, out var compId)) return;
-                NetSyncModule.InternalSingleton.StateMaps.GetOrCreateEntityState(netId).GetOrCreate(compId);
+                NetSyncModule.InternalSingleton.StateMaps.GetOrCreateComponentState(netId, compId);
                 component.InitializeNetVars(netId, compId);
             }
 
