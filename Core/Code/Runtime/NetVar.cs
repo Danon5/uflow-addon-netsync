@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Sirenix.OdinInspector;
 using UFlow.Addon.Serialization.Core.Runtime;
+using UFlow.Core.Runtime;
 using UnityEngine;
 
 // ReSharper disable StaticMemberInGenericType
@@ -14,7 +15,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         private static readonly HashSet<Type> s_validInterpolateTypes = new() {
             typeof(float)
         };
-        [SerializeField] private T m_value;
+        [SerializeField, OnValueChanged(nameof(UpdateDirtyState))] private T m_value;
         [ShowInInspector, ReadOnly, FoldoutGroup(c_internal)] private ushort m_netId;
         [ShowInInspector, ReadOnly, FoldoutGroup(c_internal)] private byte m_varId;
         [ShowInInspector, ReadOnly, FoldoutGroup(c_internal)] private ushort m_compId;
@@ -23,16 +24,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         private bool m_isDirty;
 
         public T Value {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => m_value;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set {
                 m_value = value;
-                if (!NetSyncAPI.IsServer) return;
-                var wasDirty = m_isDirty;
-                m_isDirty = !EqualityComparer<T>.Default.Equals(m_value, m_lastSentValue);
-                if (wasDirty) return;
-                if (!NetSyncModule.InternalSingleton.StateMaps.TryGetComponentState(m_netId, m_compId, out var componentState)) return;
-                componentState.NumVarsDirty++;
+                UpdateDirtyState();
             }
         }
         ushort INetVar.NetId => m_netId;
@@ -51,11 +48,17 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public T Get() => m_value;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void INetVar.Serialize(ByteBuffer buffer) => SerializationAPI.Serialize(buffer, ref m_value);
+        void INetVar.Serialize(ByteBuffer buffer) {
+            SerializationAPI.Serialize(buffer, ref m_value);
+            DebugAPI.LogMessage($"Serializing {m_value}");
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void INetVar.Deserialize(ByteBuffer buffer) => SerializationAPI.DeserializeInto(buffer, ref m_value);
-        
+        void INetVar.Deserialize(ByteBuffer buffer) {
+            SerializationAPI.DeserializeInto(buffer, ref m_value);
+            DebugAPI.LogMessage($"Deserializing {m_value}");
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void INetVar.ResetIsDirty() {
             m_isDirty = false;
@@ -73,6 +76,15 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void InterpolationTick(float delta) {
             
+        }
+
+        private void UpdateDirtyState() {
+            if (!NetSyncAPI.IsServer) return;
+            var wasDirty = m_isDirty;
+            m_isDirty = !Unsafe.AreSame(ref m_value, ref m_lastSentValue);
+            if (wasDirty) return;
+            if (!NetSyncModule.InternalSingleton.StateMaps.TryGetComponentState(m_netId, m_compId, out var componentState)) return;
+            componentState.NumVarsDirty++;
         }
     }
 }
