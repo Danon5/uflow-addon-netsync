@@ -54,10 +54,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             buffer.Write(netId);
         }
 
-        public static bool TrySerializeDeltaEntityStateIntoTempBuffer(in Entity entity, ushort netId) {
+        public static bool TrySerializeDeltaEntityStateIntoTempBuffer(NetClient client, in Entity entity, ushort netId) {
             s_tempBuffer.Reset();
             s_numDeltaInstructions = 0;
             var stateMaps = NetSyncModule.InternalSingleton.StateMaps;
+            var awarenessMaps = NetSyncModule.InternalSingleton.ServerAwarenessMaps;
+            if (!awarenessMaps.ClientShouldBeAwareOf(client, netId)) return false;
             if (!stateMaps.TryGetEntityState(netId, out var entityState)) return false;
             s_tempBuffer.Write(netId);
             if (entityState.EnabledStateDirty) {
@@ -66,6 +68,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 s_numDeltaInstructions++;
             }
             foreach (var (compId, componentState) in entityState.AsEnumerable()) {
+                if (!awarenessMaps.ClientShouldBeAwareOf(client, netId, compId)) continue;
                 if (componentState.EnabledStateDirty) {
                     var componentType = NetTypeIdMaps.ComponentMap.GetTypeFromNetworkId(compId);
                     s_tempBuffer.Write((byte)(entity.IsEnabledRaw(componentType) ?

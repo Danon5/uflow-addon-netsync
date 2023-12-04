@@ -28,14 +28,21 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         // Delta state
         protected override void IterateEntity(World world, in Entity entity) {
+            var netSyncModule = NetSyncModule.InternalSingleton;
+            var awarenessMaps = netSyncModule.ServerAwarenessMaps;
             foreach (var client in NetSyncAPI.ServerAPI.GetClientsEnumerable()) {
                 if (NetSyncAPI.ServerAPI.IsHostClient(client)) continue;
                 ref var netSynchronize = ref entity.Get<NetSynchronize>();
                 var netId = netSynchronize.netId;
-                if (!ClientShouldBeAwareOf(client, netId)) continue;
-                SendEntityDeltaPacketToClientIfRequired(client, entity, netId);
+                if (!awarenessMaps.ClientShouldBeAwareOf(client, netId)) continue;
+                if (awarenessMaps.ClientIsAwareOf(client, netId))
+                    SendEntityDeltaPacketToClientIfRequired(client, entity, netId);
+                else {
+                    SendCreateEntityPacketToClient(client, entity, netId);
+                    awarenessMaps.MakeClientAwareOf(client, netId);
+                }
             }
-            NetSyncModule.InternalSingleton.StateMaps.ResetDeltas();
+            netSyncModule.StateMaps.ResetDeltas();
         }
 
         // Initial state
@@ -46,7 +53,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 var netId = netSynchronize.netId;
                 var netSyncModule = NetSyncModule.InternalSingleton;
                 var awarenessMaps = netSyncModule.ServerAwarenessMaps;
-                if (ClientShouldBeAwareOf(client, netId)) {
+                if (awarenessMaps.ClientShouldBeAwareOf(client, netId)) {
                     if (awarenessMaps.ClientIsAwareOf(client, netId)) continue;
                     SendCreateEntityPacketToClient(client, entity, netId);
                     awarenessMaps.MakeClientAwareOf(client, netId);
@@ -107,7 +114,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         private static void SendEntityDeltaPacketToClientIfRequired(NetClient client, in Entity entity, ushort netId) {
-            if (!NetSerializer.TrySerializeDeltaEntityStateIntoTempBuffer(entity, netId)) return;
+            if (!NetSerializer.TrySerializeDeltaEntityStateIntoTempBuffer(client, entity, netId)) return;
             var netSyncModule = NetSyncModule.InternalSingleton;
             netSyncModule.Transport.BeginWrite(NetPacketType.EntityDelta);
             NetSerializer.SerializeDeltaEntityState(netSyncModule.Transport.Buffer);
@@ -117,16 +124,5 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 #endif
             netSyncModule.Transport.SendBufferPayloadToClient(client);
         }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool ClientShouldBeAwareOf(NetClient client, ushort netId) => true;
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool ClientShouldBeAwareOf(NetClient client, ushort netId, ushort compId) => 
-            ClientShouldBeAwareOf(client, netId) && true;
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool ClientShouldBeAwareOf(NetClient client, ushort netId, ushort compId, byte varId) => 
-            ClientShouldBeAwareOf(client, netId, compId) && true;
     }
 }

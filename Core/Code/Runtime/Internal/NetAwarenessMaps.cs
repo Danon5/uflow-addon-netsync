@@ -72,6 +72,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Clear() => m_entityAwarenessMaps.Clear();
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool ClientShouldBeAwareOf(NetClient client, ushort netId) => true;
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool ClientShouldBeAwareOf(NetClient client, ushort netId, ushort compId) => 
+            ClientShouldBeAwareOf(client, netId) && true;
+
         private EntityAwarenessMap GetOrCreateEntityAwarenessMap(ushort clientId) {
             if (m_entityAwarenessMaps.TryGetValue(clientId, out var entityAwarenessMap)) 
                 return entityAwarenessMap;

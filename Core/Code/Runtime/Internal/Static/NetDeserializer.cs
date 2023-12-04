@@ -110,8 +110,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             entity.Set(new NetSynchronize {
                 netId = netId
             });
-            DeserializeInitialEntityState(buffer, entity, netId);
             PublisherDelay.EndDelay();
+            DeserializeInitialEntityState(buffer, entity, netId);
         }
         
         private static void DeserializeCreateSceneEntity(ByteBuffer buffer) {
@@ -126,8 +126,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             entity.Set(new NetSynchronize {
                 netId = netId
             });
-            DeserializeInitialEntityState(buffer, entity, netId);
             PublisherDelay.EndDelay();
+            DeserializeInitialEntityState(buffer, entity, netId);
         }
         
         private static void DeserializeDestroyEntity(ByteBuffer buffer) {
@@ -149,14 +149,11 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 var compId = buffer.ReadUShort();
                 var enabled = buffer.ReadBool();
                 var varCount = buffer.ReadByte();
-                var componentMapFound = stateMaps.TryGetEntityState(netId, out var entityState);
                 networkCompIdList.Add(compId);
                 networkCompEnabledList.Add(enabled);
                 for (var j = 0; j < varCount; j++) {
                     var varId = buffer.ReadByte();
-                    if (!componentMapFound) continue;
-                    if (!entityState.TryGet(compId, out var componentState))
-                        throw new Exception($"Failed to get ComponentState. NetID: {netId}, CompID: {compId}");
+                    var componentState = stateMaps.GetOrCreateComponentState(netId, compId);
                     if (!componentState.TryGet(varId, out var netVar))
                         throw new Exception($"Failed to get NetVar. NetID: {netId}, CompID: {compId}, VarID: {varId}");
                     netVar.Deserialize(buffer);
