@@ -6,5 +6,6 @@
         CreateEntity,
         CreateSceneEntity,
         DestroyEntity,
+        EntityDelta
     }
 }

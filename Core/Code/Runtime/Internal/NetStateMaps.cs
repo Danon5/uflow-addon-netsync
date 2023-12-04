@@ -12,48 +12,40 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         private readonly EntityMap m_entityMap = new();
         private readonly EntityStateMap m_entityStateMap = new();
         private readonly object[] m_objectBuffer = new object[1];
-        private IDisposable m_netVarSubscriptions;
+        private IDisposable m_subscriptions;
         private bool m_initialized;
 
         public void RegisterSubscriptionsIfRequired() {
             if (m_initialized) return;
-            var world = NetSyncModule.InternalSingleton.World;
-            var subscriptionType = typeof(NetVarSubscriptions<>);
-            var addedDelegateType = typeof(EntityComponentAddedHandler<>);
-            var removedDelegateType = typeof(EntityComponentRemovedHandler<>);
-            var worldType = world.GetType();
             var subscriptions = new List<IDisposable>();
+            var world = NetSyncModule.InternalSingleton.World;
+            subscriptions.Add(world.SubscribeEntityEnabled(OnEntityEnabled));
+            subscriptions.Add(world.SubscribeEntityDisabled(OnEntityDisabled));
+            var addedDelegateType = typeof(EntityComponentAddedHandler<>);
+            var enabledDelegateType = typeof(EntityComponentEnabledHandler<>);
+            var disabledDelegateType = typeof(EntityComponentDisabledHandler<>);
+            var removedDelegateType = typeof(EntityComponentRemovedHandler<>);
             foreach (var componentType in UFlowUtils.Reflection.GetInheritors<IEcsNetComponent>(false,
                 UFlowUtils.Reflection.CommonExclusionNamespaces)) {
-                // Component added subscription
-                var genericAddedDelegateType = addedDelegateType.MakeGenericType(componentType);
-                m_objectBuffer[0] = subscriptionType!
-                    .MakeGenericType(componentType)!
-                    .GetMethod("OnEntityComponentAdded", BindingFlags.Public | BindingFlags.Static)!
-                    .CreateDelegate(genericAddedDelegateType);
-                var addedSubscription = worldType!
-                    .GetMethod("SubscribeEntityComponentAdded", BindingFlags.Public | BindingFlags.Instance)!
-                    .MakeGenericMethod(componentType)!
-                    .Invoke(world, m_objectBuffer) as IDisposable;
-                // Component removed subscription
-                var genericRemovedDelegateType = removedDelegateType.MakeGenericType(componentType);
-                m_objectBuffer[0] = subscriptionType!
-                    .MakeGenericType(componentType)!
-                    .GetMethod("OnEntityComponentRemoved", BindingFlags.Public | BindingFlags.Static)!
-                    .CreateDelegate(genericRemovedDelegateType);
-                var removedSubscription = worldType!
-                    .GetMethod("SubscribeEntityComponentRemoved", BindingFlags.Public | BindingFlags.Instance)!
-                    .MakeGenericMethod(componentType)!
-                    .Invoke(world, m_objectBuffer) as IDisposable;
-                subscriptions.Add(addedSubscription);
-                subscriptions.Add(removedSubscription);
+                // Added
+                subscriptions.Add(AddGenericSubscription(world, componentType, 
+                    addedDelegateType, "OnEntityComponentAdded", "SubscribeEntityComponentAdded"));
+                // Enabled
+                subscriptions.Add(AddGenericSubscription(world, componentType, 
+                    enabledDelegateType, "OnEntityComponentEnabled", "SubscribeEntityComponentEnabled"));
+                // Disabled
+                subscriptions.Add(AddGenericSubscription(world, componentType, 
+                    disabledDelegateType, "OnEntityComponentDisabled", "SubscribeEntityComponentDisabled"));
+                // Removed
+                subscriptions.Add(AddGenericSubscription(world, componentType, 
+                    removedDelegateType, "OnEntityComponentRemoved", "SubscribeEntityComponentRemoved"));
             }
-            m_netVarSubscriptions = DisposableExtensions.MergeIntoGroup(subscriptions);
+            m_subscriptions = DisposableExtensions.MergeIntoGroup(subscriptions);
             m_initialized = true;
         }
 
         public void DisposeSubscriptions() {
-            m_netVarSubscriptions?.Dispose();
+            m_subscriptions?.Dispose();
             m_initialized = false;
         }
 
@@ -61,38 +53,47 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public EntityMap GetEntityMap() => m_entityMap;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool HasEntity(ushort netId) => m_entityMap.ContainsKey(netId);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Entity GetEntity(ushort netId) => m_entityMap.Get(netId);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryGetEntity(ushort netId, out Entity entity) => m_entityMap.TryGet(netId, out entity);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public EntityStateMap GetEntityStateMap() => m_entityStateMap;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool HasComponentStateMap(ushort netId) => m_entityStateMap.ContainsKey(netId);
+        public bool HasEntityState(ushort netId) => m_entityStateMap.ContainsKey(netId);
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ComponentStateMap GetComponentStateMap(ushort netId) => m_entityStateMap.Get(netId);
+        public EntityState GetEntityState(ushort netId) => m_entityStateMap.Get(netId);
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ComponentStateMap GetOrCreateComponentStateMap(ushort netId) => m_entityStateMap.GetOrCreate(netId);
+        public EntityState GetOrCreateEntityState(ushort netId) => m_entityStateMap.GetOrCreate(netId);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryGetComponentStateMap(ushort netId, out ComponentStateMap componentStateMap) {
-            if (!HasComponentStateMap(netId)) {
-                componentStateMap = default;
+        public bool TryGetEntityState(ushort netId, out EntityState entityState) {
+            if (!HasEntityState(netId)) {
+                entityState = default;
                 return false;
             }
-            componentStateMap = GetComponentStateMap(netId);
+            entityState = GetEntityState(netId);
             return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool HasComponentState(ushort netId, ushort compId) => 
-            m_entityStateMap.TryGet(netId, out var componentStateMap) && componentStateMap.ContainsKey(compId);
+            m_entityStateMap.TryGet(netId, out var entityState) && entityState.ContainsKey(compId);
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ComponentState GetComponentState(ushort netId, ushort compId) => 
-            GetComponentStateMap(netId).Get(compId);
+            GetEntityState(netId).Get(compId);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ComponentState GetOrCreateComponentState(ushort netId, ushort compId) => 
-            GetOrCreateComponentStateMap(netId).GetOrCreate(compId);
+            GetOrCreateEntityState(netId).GetOrCreate(compId);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetComponentState(ushort netId, ushort compId, out ComponentState componentState) {
@@ -113,26 +114,97 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             m_entityStateMap.Clear();
         }
 
+        public void ResetDeltas() {
+            foreach (var (netId, entityState) in m_entityStateMap.AsEnumerable()) {
+                entityState.EnabledStateDirty = false;
+                foreach (var (compId, componentState) in entityState.AsEnumerable())
+                    componentState.EnabledStateDirty = false;
+            }
+        }
+        
+        private static void OnEntityEnabled(in Entity entity) {
+            if (!TryGetEntityStateInfo(entity, out var netId, out var entityState)) return;
+            entityState.EnabledStateDirty = true;
+        }
+        
+        private static void OnEntityDisabled(in Entity entity) {
+            if (!TryGetEntityStateInfo(entity, out var netId, out var entityState)) return;
+            entityState.EnabledStateDirty = true;
+        }
+
+        private static bool TryGetEntityStateInfo(in Entity entity,
+                                            out ushort netId, out EntityState entityState) {
+            netId = default;
+            entityState = default;
+            NetSyncModule.ThrowIfNotLoaded();
+            if (!NetSyncAPI.NetworkInitialized) return false;
+            if (!entity.TryGet(out NetSynchronize netSynchronize)) return false;
+            netId = netSynchronize.netId;
+            return NetSyncModule.InternalSingleton.StateMaps.TryGetEntityState(netId, out entityState);
+        }
+        
+        private IDisposable AddGenericSubscription(World world, Type componentType, Type delegateType,
+                                                       in string handlerMethod, in string eventMethod) {
+            var worldType = world.GetType();
+            var subscriptionType = typeof(NetVarSubscriptions<>);
+            var genericDelegateType = delegateType.MakeGenericType(componentType);
+            m_objectBuffer[0] = subscriptionType!
+                .MakeGenericType(componentType)!
+                .GetMethod(handlerMethod, BindingFlags.Public | BindingFlags.Static)!
+                .CreateDelegate(genericDelegateType);
+            return worldType!
+                .GetMethod(eventMethod, BindingFlags.Public | BindingFlags.Instance)!
+                .MakeGenericMethod(componentType)!
+                .Invoke(world, m_objectBuffer) as IDisposable;
+        }
+
         private static class NetVarSubscriptions<T> where T : IEcsNetComponent {
             [Preserve]
             public static void OnEntityComponentAdded(in Entity entity, ref T component) {
-                NetSyncModule.ThrowIfNotLoaded();
-                if (!NetSyncAPI.NetworkInitialized) return;
-                if (!entity.TryGet(out NetSynchronize netSynchronize)) return;
-                var netId = netSynchronize.netId;
-                var compId = NetTypeIdMaps.ComponentMap.GetNetworkIdFromType(typeof(T));
-                NetSyncModule.InternalSingleton.StateMaps.GetOrCreateComponentStateMap(netId).GetOrCreate(compId);
+                if (!TryGetIds(entity, out var netId, out var compId)) return;
+                NetSyncModule.InternalSingleton.StateMaps.GetOrCreateEntityState(netId).GetOrCreate(compId);
                 component.InitializeNetVars(netId, compId);
+            }
+
+            [Preserve]
+            public static void OnEntityComponentEnabled(in Entity entity, ref T component) {
+                if (!TryGetAllStateInfo(entity, out var netId, out var compId, out var entityState, out var componentState)) return;
+                componentState.EnabledStateDirty = true;
+            }
+            
+            [Preserve]
+            public static void OnEntityComponentDisabled(in Entity entity, ref T component) {
+                if (!TryGetAllStateInfo(entity, out var netId, out var compId, out var entityState, out var componentState)) return;
+                componentState.EnabledStateDirty = true;
             }
             
             [Preserve]
             public static void OnEntityComponentRemoved(in Entity entity, in T component) {
+                if (!TryGetIds(entity, out var netId, out var compId)) return;
+                NetSyncModule.InternalSingleton.StateMaps.GetEntityState(netId).Remove(compId);
+            }
+
+            private static bool TryGetIds(in Entity entity, 
+                                          out ushort netId, out ushort compId) {
+                netId = default;
+                compId = default;
                 NetSyncModule.ThrowIfNotLoaded();
-                if (!NetSyncAPI.NetworkInitialized) return;
-                if (!entity.TryGet(out NetSynchronize netSynchronize)) return;
-                var netId = netSynchronize.netId;
-                var compId = NetTypeIdMaps.ComponentMap.GetNetworkIdFromType(typeof(T));
-                NetSyncModule.InternalSingleton.StateMaps.GetComponentStateMap(netId).Remove(compId);
+                if (!NetSyncAPI.NetworkInitialized) return false;
+                if (!entity.TryGet(out NetSynchronize netSynchronize)) return false;
+                netId = netSynchronize.netId;
+                compId = NetTypeIdMaps.ComponentMap.GetNetworkIdFromType(typeof(T));
+                return true;
+            }
+
+            private static bool TryGetAllStateInfo(in Entity entity, 
+                                                out ushort netId, out ushort compId,
+                                                out EntityState entityState, out ComponentState componentState) {
+                entityState = default;
+                componentState = default;
+                if (!TryGetIds(entity, out netId, out compId)) return false;
+                var stateMaps = NetSyncModule.InternalSingleton.StateMaps;
+                return stateMaps.TryGetEntityState(netId, out entityState) && 
+                    stateMaps.TryGetComponentState(netId, compId, out componentState);
             }
         }
 
@@ -167,18 +239,20 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         public sealed class EntityMap : BaseStateMap<ushort, Entity> { }
 
-        public sealed class EntityStateMap : BaseStateMap<ushort, ComponentStateMap> {
+        public sealed class EntityStateMap : BaseStateMap<ushort, EntityState> {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public ComponentStateMap GetOrCreate(ushort key) {
+            public EntityState GetOrCreate(ushort key) {
                 if (TryGet(key, out var value)) 
                     return value;
-                value = new ComponentStateMap();
+                value = new EntityState();
                 Add(key, value);
                 return value;
             }
         }
 
-        public sealed class ComponentStateMap : BaseStateMap<ushort, ComponentState> {
+        public sealed class EntityState : BaseStateMap<ushort, ComponentState> {
+            public bool EnabledStateDirty { get; set; }
+            
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public ComponentState GetOrCreate(ushort key) {
                 if (TryGet(key, out var value))
@@ -189,6 +263,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             }
         }
 
-        public sealed class ComponentState : BaseStateMap<byte, INetVar> { }
+        public sealed class ComponentState : BaseStateMap<byte, INetVar> {
+            public bool EnabledStateDirty { get; set; }
+        }
     }
 }

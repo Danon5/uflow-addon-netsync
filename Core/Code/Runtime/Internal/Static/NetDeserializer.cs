@@ -4,7 +4,6 @@ using LiteNetLib;
 using UFlow.Addon.ECS.Core.Runtime;
 using UFlow.Addon.Serialization.Core.Runtime;
 using UFlow.Core.Runtime;
-using UnityEngine.Pool;
 using UnityEngine.Scripting;
 
 namespace UFlow.Addon.NetSync.Core.Runtime {
@@ -32,6 +31,9 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                     break;
                 case NetPacketType.DestroyEntity:
                     DeserializeDestroyEntity(buffer);
+                    break;
+                case NetPacketType.EntityDelta:
+                    DeserializeDeltaEntityState(buffer);
                     break;
                 default:
                     throw new Exception($"Receiving unhandled packet. PacketType: {packetType}");
@@ -147,14 +149,16 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 var compId = buffer.ReadUShort();
                 var enabled = buffer.ReadBool();
                 var varCount = buffer.ReadByte();
-                var componentMapFound = stateMaps.TryGetComponentStateMap(netId, out var componentStateMap);
+                var componentMapFound = stateMaps.TryGetEntityState(netId, out var entityState);
                 networkCompIdList.Add(compId);
                 networkCompEnabledList.Add(enabled);
                 for (var j = 0; j < varCount; j++) {
                     var varId = buffer.ReadByte();
                     if (!componentMapFound) continue;
-                    if (!componentStateMap.TryGet(compId, out var componentState)) continue;
-                    if (!componentState.TryGet(varId, out var netVar)) continue;
+                    if (!entityState.TryGet(compId, out var componentState))
+                        throw new Exception($"Failed to get ComponentState. NetID: {netId}, CompID: {compId}");
+                    if (!componentState.TryGet(varId, out var netVar))
+                        throw new Exception($"Failed to get NetVar. NetID: {netId}, CompID: {compId}, VarID: {varId}");
                     netVar.Deserialize(buffer);
                 }
             }
@@ -176,6 +180,39 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                 entity.SetEnabledRaw(componentType, networkCompEnabledList[i]);
             }
             entity.SetEnabled(isEnabled);
+        }
+
+        private static void DeserializeDeltaEntityState(ByteBuffer buffer) {
+            var numDeltaInstructions = buffer.ReadByte();
+            var netId = buffer.ReadUShort();
+#if UFLOW_DEBUG_ENABLED
+            DebugAPI.LogMessage($"Deserializing {NetPacketType.EntityDelta}. NetID: {netId}, NumInstructions: {numDeltaInstructions}");
+#endif
+            if (!NetSyncModule.InternalSingleton.StateMaps.TryGetEntity(netId, out var entity))
+                throw new Exception($"Receiving delta for invalid entity. NetID: {netId}");
+            for (var i = 0; i < numDeltaInstructions; i++) {
+                var instruction = (NetDeltaType)buffer.ReadByte();
+                switch (instruction) {
+                    case NetDeltaType.EntityEnabled:
+                        entity.SetEnabled(true);
+                        break;
+                    case NetDeltaType.EntityDisabled:
+                        entity.SetEnabled(false);
+                        break;
+                    case NetDeltaType.ComponentEnabled: {
+                        var compId = buffer.ReadUShort();
+                        entity.SetEnabledRaw(NetTypeIdMaps.ComponentMap.GetTypeFromNetworkId(compId), true);
+                    }
+                        break;
+                    case NetDeltaType.ComponentDisabled: {
+                        var compId = buffer.ReadUShort();
+                        entity.SetEnabledRaw(NetTypeIdMaps.ComponentMap.GetTypeFromNetworkId(compId), false);
+                    }
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
         }
         
         private delegate void DeserializeRpcDelegate(ByteBuffer buffer, NetPeer peer);
