@@ -16,13 +16,13 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Entity GetEntityFromNetId(ushort netId) {
             NetSyncModule.ThrowIfNotLoaded();
-            return NetSyncModule.InternalSingleton.StateMaps.GetEntityMap().Get(netId);
+            return NetSyncModule.InternalSingleton.StateMaps.GetEntity(netId);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool TryGetEntityFromNetId(ushort netId, out Entity entity) {
             NetSyncModule.ThrowIfNotLoaded();
-            return NetSyncModule.InternalSingleton.StateMaps.GetEntityMap().TryGet(netId, out entity);
+            return NetSyncModule.InternalSingleton.StateMaps.TryGetEntity(netId, out entity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

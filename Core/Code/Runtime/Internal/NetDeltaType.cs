@@ -3,6 +3,7 @@
         EntityEnabled,
         EntityDisabled,
         ComponentEnabled,
-        ComponentDisabled
+        ComponentDisabled,
+        NetVarsChanged
     }
 }

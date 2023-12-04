@@ -5,7 +5,7 @@ using UFlow.Core.Runtime;
 namespace UFlow.Addon.NetSync.Core.Runtime {
     internal static class NetSerializer {
         private static readonly ByteBuffer s_tempBuffer = new();
-        private static byte s_numDeltaTypesInTempBuffer;
+        private static byte s_numDeltaInstructions;
 
         static NetSerializer() => UnityGlobalEventHelper.RuntimeInitializeOnLoad += ClearStaticCache;
         
@@ -56,14 +56,14 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         public static bool TrySerializeDeltaEntityStateIntoTempBuffer(in Entity entity, ushort netId) {
             s_tempBuffer.Reset();
-            s_numDeltaTypesInTempBuffer = 0;
+            s_numDeltaInstructions = 0;
             var stateMaps = NetSyncModule.InternalSingleton.StateMaps;
             if (!stateMaps.TryGetEntityState(netId, out var entityState)) return false;
             s_tempBuffer.Write(netId);
             if (entityState.EnabledStateDirty) {
                 s_tempBuffer.Write((byte)(entity.IsEnabled() ? 
                     NetDeltaType.EntityEnabled : NetDeltaType.EntityDisabled));
-                s_numDeltaTypesInTempBuffer++;
+                s_numDeltaInstructions++;
             }
             foreach (var (compId, componentState) in entityState.AsEnumerable()) {
                 if (componentState.EnabledStateDirty) {
@@ -71,17 +71,25 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                     s_tempBuffer.Write((byte)(entity.IsEnabledRaw(componentType) ?
                         NetDeltaType.ComponentEnabled : NetDeltaType.ComponentDisabled));
                     s_tempBuffer.Write(compId);
-                    s_numDeltaTypesInTempBuffer++;
+                    s_numDeltaInstructions++;
                 }
-                foreach (var (varId, netVar) in componentState.AsEnumerable()) {
-                    
+                if (componentState.NumVarsDirty > 0) {
+                    s_tempBuffer.Write((byte)NetDeltaType.NetVarsChanged);
+                    s_tempBuffer.Write(compId);
+                    s_tempBuffer.Write(componentState.NumVarsDirty);
+                    foreach (var (varId, netVar) in componentState.AsEnumerable()) {
+                        if (!netVar.IsDirty) continue;
+                        s_tempBuffer.Write(varId);
+                        netVar.Serialize(s_tempBuffer);
+                    }
+                    s_numDeltaInstructions++;
                 }
             }
-            return s_numDeltaTypesInTempBuffer > 0;
+            return s_numDeltaInstructions > 0;
         }
 
         public static void SerializeDeltaEntityState(ByteBuffer buffer) {
-            buffer.Write(s_numDeltaTypesInTempBuffer);
+            buffer.Write(s_numDeltaInstructions);
             s_tempBuffer.AppendBufferTo(buffer);
         }
 
@@ -105,7 +113,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         private static void ClearStaticCache() {
             s_tempBuffer.Reset();
-            s_numDeltaTypesInTempBuffer = 0;
+            s_numDeltaInstructions = 0;
         }
     }
 }

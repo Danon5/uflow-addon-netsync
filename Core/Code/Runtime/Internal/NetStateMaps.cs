@@ -117,8 +117,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         public void ResetDeltas() {
             foreach (var (netId, entityState) in m_entityStateMap.AsEnumerable()) {
                 entityState.EnabledStateDirty = false;
-                foreach (var (compId, componentState) in entityState.AsEnumerable())
+                foreach (var (compId, componentState) in entityState.AsEnumerable()) {
                     componentState.EnabledStateDirty = false;
+                    componentState.NumVarsDirty = 0;
+                    foreach (var (varId, netVar) in componentState.AsEnumerable())
+                        netVar.ResetIsDirty();
+                }
             }
         }
         
@@ -265,6 +269,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
 
         public sealed class ComponentState : BaseStateMap<byte, INetVar> {
             public bool EnabledStateDirty { get; set; }
+            public byte NumVarsDirty { get; set; }
         }
     }
 }

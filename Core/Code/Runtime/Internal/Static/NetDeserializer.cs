@@ -209,6 +209,20 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
                         entity.SetEnabledRaw(NetTypeIdMaps.ComponentMap.GetTypeFromNetworkId(compId), false);
                     }
                         break;
+                    case NetDeltaType.NetVarsChanged: {
+                        var compId = buffer.ReadUShort();
+                        var numVarsDirty = buffer.ReadByte();
+                        if (!NetSyncModule.InternalSingleton.StateMaps.TryGetComponentState(netId, compId, out var componentState))
+                            throw new Exception($"Receiving delta for invalid component. NetID: {netId}, CompID: {compId}");
+                        for (var j = 0; j < numVarsDirty; j++) {
+                            var varId = buffer.ReadByte();
+                            if (!componentState.TryGet(varId, out var netVar))
+                                throw new Exception(
+                                    $"Receiving delta for invalid variable. NetID: {netId}, CompID: {compId}, VarID: {compId}");
+                            netVar.Deserialize(buffer);
+                        }
+                    }
+                        break;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }

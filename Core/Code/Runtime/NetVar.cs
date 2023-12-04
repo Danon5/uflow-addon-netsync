@@ -17,6 +17,7 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         [SerializeField] private T m_value;
         [ShowInInspector, ReadOnly, FoldoutGroup(c_internal)] private ushort m_netId;
         [ShowInInspector, ReadOnly, FoldoutGroup(c_internal)] private byte m_varId;
+        [ShowInInspector, ReadOnly, FoldoutGroup(c_internal)] private ushort m_compId;
         [ShowInInspector, ReadOnly, FoldoutGroup(c_internal)] private bool m_interpolate;
         private T m_lastSentValue;
         private bool m_isDirty;
@@ -26,10 +27,16 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set {
                 m_value = value;
+                if (!NetSyncAPI.IsServer) return;
+                var wasDirty = m_isDirty;
                 m_isDirty = !EqualityComparer<T>.Default.Equals(m_value, m_lastSentValue);
+                if (wasDirty) return;
+                if (!NetSyncModule.InternalSingleton.StateMaps.TryGetComponentState(m_netId, m_compId, out var componentState)) return;
+                componentState.NumVarsDirty++;
             }
         }
         ushort INetVar.NetId => m_netId;
+        ushort INetVar.CompId => m_compId;
         byte INetVar.VarId => m_varId;
         bool INetVar.IsDirty => m_isDirty;
         bool INetVar.Interpolate => m_interpolate;
@@ -47,17 +54,21 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         void INetVar.Serialize(ByteBuffer buffer) => SerializationAPI.Serialize(buffer, ref m_value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void INetVar.Deserialize(ByteBuffer buffer) => SerializationAPI.DeserializeInto(buffer, ref m_value); 
+        void INetVar.Deserialize(ByteBuffer buffer) => SerializationAPI.DeserializeInto(buffer, ref m_value);
         
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        void INetVar.ResetIsDirty() {
+            m_isDirty = false;
+            m_lastSentValue = m_value;
+        }
+
         internal void Initialize(ushort netId, ushort compId, byte varId, bool interpolate) {
             m_netId = netId;
+            m_compId = compId;
             m_varId = varId;
             m_interpolate = interpolate && IsValidInterpolateType;
             NetSyncModule.InternalSingleton.StateMaps.GetOrCreateComponentState(netId, compId).Add(varId, this);
         }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void UpdateLastSentValue() => m_lastSentValue = m_value;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void InterpolationTick(float delta) {
