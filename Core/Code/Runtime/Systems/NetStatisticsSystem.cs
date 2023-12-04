@@ -46,8 +46,8 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         private static string GetStatisticsString(in NetStatisticData statistics) =>
-            $"Bytes Incoming: {ParseBytes(statistics.bytesIncoming)} /s\n" +
-            $"Bytes Outgoing: {ParseBytes(statistics.bytesOutgoing)} /s\n" +
+            $"Bytes Incoming: {ParseBytes(statistics.bytesIncoming)}/s\n" +
+            $"Bytes Outgoing: {ParseBytes(statistics.bytesOutgoing)}/s\n" +
             $"Packets Incoming: {statistics.packetsIncoming}\n" +
             $"Packets Outgoing: {statistics.packetsOutgoing}\n" +
             $"Packets Lost: {statistics.packetsLost}\n" +
