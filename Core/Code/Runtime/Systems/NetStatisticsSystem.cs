@@ -46,11 +46,19 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         private static string GetStatisticsString(in NetStatisticData statistics) =>
-            $"Bytes Incoming: {statistics.bytesIncoming} b/s\n" +
-            $"Bytes Outgoing: {statistics.bytesOutgoing} b/s\n" +
+            $"Bytes Incoming: {ParseBytes(statistics.bytesIncoming)} /s\n" +
+            $"Bytes Outgoing: {ParseBytes(statistics.bytesOutgoing)} /s\n" +
             $"Packets Incoming: {statistics.packetsIncoming}\n" +
             $"Packets Outgoing: {statistics.packetsOutgoing}\n" +
             $"Packets Lost: {statistics.packetsLost}\n" +
             $"Packet Loss: {statistics.packetLossPercent}%";
+
+        private static string ParseBytes(int bytes) {
+            return bytes switch {
+                > 1000000 => $"{bytes / 1000000} MB",
+                > 1000 => $"{bytes / 1000} KB",
+                _ => $"{bytes} B"
+            };
+        }
     }
 }
