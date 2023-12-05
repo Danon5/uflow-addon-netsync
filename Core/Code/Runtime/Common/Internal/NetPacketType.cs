@@ -6,6 +6,8 @@
         CreateEntity,
         CreateSceneEntity,
         DestroyEntity,
-        EntityDelta
+        EntityDelta,
+        InitialState,
+        DeltaState
     }
 }

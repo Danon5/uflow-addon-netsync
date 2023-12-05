@@ -108,12 +108,12 @@ namespace UFlow.Addon.NetSync.Core.Runtime {
         }
 
         private void ResetState() {
+            serverSpawnQueue.Clear();
+            m_tickRolloverDelta = 0f;
+            NetworkTime = 0f;
             ServerAwarenessMaps.Clear();
             StateMaps.Clear();
             NetServerIdStack.Reset();
-            NetworkTime = 0f;
-            m_tickRolloverDelta = 0f;
-            serverSpawnQueue.Clear();
         }
 
         private void ServerOnStateChanged(ConnectionState state) {
